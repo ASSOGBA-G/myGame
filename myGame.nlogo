@@ -1,3 +1,4 @@
+;;author: Gildas Assogba
 globals [
   season;;type of season: 0=bad, 1=good, 2=very good
   saison;; explanation of season, see set up
@@ -1459,7 +1460,6 @@ to feedfamily [gamer]
     set feedfam 1
 ]
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 456
@@ -2093,7 +2093,7 @@ MONITOR
 944
 201
 1019
-247
+246
 stock residue
 count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"]
 17
