@@ -1,0 +1,236 @@
+to market
+  marche-buy
+  marche-sell
+  let idplays idplay
+  livupdate idplays
+  hubnet-send pseudo "amount_buy" 0
+  hubnet-send pseudo "amount_sell" 0
+end
+
+
+to marche-sell
+  let psd pseudo
+  let idplays idplay
+  let arret 0
+  let bonus 0;for livestock in dec, apr, june
+  let bonus2 0;for grain in april-june
+  let bonus3 0; for tricycle
+  let sell_whats sell_what
+  let sell_how_muchs amount_sell
+  let biom_weights biom_weight
+  if sell_whats = "tricycle" [set bonus3 2]
+  if month = "December" or month = "April" or month = "June" [set bonus 1]
+  if month = "April" or month = "May" or month = "June" [set bonus2 1]
+  let etat ""
+  let qsell 0
+  if sell_whats = "concentrate" [set sell_whats "conc"]
+  if sell_whats = "small ruminant" [set sell_whats "srum"]
+
+  ifelse sell_whats != "cart" and sell_whats != "tricyle" and sell_whats != "poultry" [
+    ask farmers with [player = idplays][
+      set qsell count out-link-neighbors with [typo = sell_whats and [pcolor] of patch-here != white and state = biom_weights]]
+  ]
+  [ifelse sell_whats = "cart" [set qsell item 0[ncart] of farmers with [player = idplays]][set qsell item 0[ntricycle] of farmers with [player = idplays]]]
+  
+  if sell_whats = "poultry" [ifelse sell_how_muchs < 10 and sell_how_muchs != 0[
+    hubnet-send psd  "warning" "Sender: you cannot sell less than 10 poultry. Please try again" 
+    set arret 1]
+    [set qsell item 0[npoultry] of farmers with [player = idplays]]
+  ]
+  
+  if arret = 0 [
+  if sell_whats = "fertilizer" [set qsell item 0[nfertilizer] of farmers with [player = idplays]]
+  if sell_whats = "conc" [set qsell item 0[nconc] of farmers with [player = idplays]]
+  if sell_whats = "grain" [set qsell item 0[ngrain] of farmers with [player = idplays]]
+    if sell_whats = "manure" [set qsell item 0[nmanure] of farmers with [player = idplays]]
+    
+    if sell_how_muchs > qsell [
+      hubnet-send psd "warning" "Sender: you cannot sell more than you have. Please try again" 
+      set arret 1]
+    
+    if arret = 0 [
+    ifelse sell_whats != "cart" and sell_whats != "tricycle" and sell_whats != "poultry"
+    and sell_whats != "tricycle" and sell_whats != "fertilizer" and sell_whats != "conc" and sell_whats != "manure"[
+      ask farmers with [player = idplays][
+        ask n-of sell_how_muchs out-link-neighbors with [typo = sell_whats and [pcolor] of patch-here != white and state = biom_weights][
+        set etat state
+        die
+      ]
+      if sell_whats = "cattle" [
+        if etat = "skinny"[set onfarm_inc onfarm_inc + (6 + bonus) * sell_how_muchs]; * sell_how_much
+        if etat = "medium"[set onfarm_inc onfarm_inc + (8 + bonus) * sell_how_muchs]
+        if etat = "fat"[set onfarm_inc onfarm_inc + (10 + bonus) * sell_how_muchs]
+      ]
+      if sell_whats = "srum" [
+        if etat = "skinny"[set onfarm_inc onfarm_inc + (1 + bonus) * sell_how_muchs]
+        if etat = "medium"[set onfarm_inc onfarm_inc + (2 + bonus) * sell_how_muchs]
+        if etat = "fat"[set onfarm_inc onfarm_inc + (3 + bonus) * sell_how_muchs]
+      ]
+      if sell_whats = "donkey" [
+        if etat = "skinny"[set onfarm_inc onfarm_inc + (3 + bonus) * sell_how_muchs]
+        if etat = "medium"[set onfarm_inc onfarm_inc + (5 + bonus) * sell_how_muchs]
+        if etat = "fat"[set onfarm_inc onfarm_inc + (6 + bonus) * sell_how_muchs]
+      ]
+      if sell_whats = "residue" or sell_whats = "grain" [set onfarm_inc onfarm_inc + (2 + bonus2) * sell_how_muchs]
+    ]
+  ][
+    ask farmers with [player = idplays][
+      ifelse sell_whats = "cart" and sell_whats = "tricycle" [
+        set onfarm_inc onfarm_inc + (6 + bonus3) * sell_how_muchs]
+      [if sell_whats = "poultry"[set onfarm_inc onfarm_inc + (1 + bonus) * (sell_how_muchs / 10)];1unit of money = 10 poultry
+       if sell_whats = "fertilizer" [set onfarm_inc onfarm_inc + 1 * sell_how_muchs]
+        if sell_whats = "conc" [set onfarm_inc onfarm_inc + (2 + bonus2) * sell_how_muchs]
+        if sell_whats = "manure" [set onfarm_inc onfarm_inc + (2 + bonus2) * sell_how_muchs]
+      ]
+
+      ask n-of sell_how_muchs out-link-neighbors with [typo = sell_whats][
+        die
+          ]
+          
+      ]]
+      
+    ]
+  ]
+end
+
+to marche-buy
+  let psd pseudo
+  let idplays idplay
+  let arret 0
+  let bonus 0;for livestock in dec, apr, june
+  let bonus2 0;for grain in april-june
+  let bonus3 0; for tricycle
+  let buy_whats buy_what
+  let buy_how_muchs amount_buy
+  
+  if buy_whats = "tricycle" [set bonus3 2]
+  if month = "December" or month = "April" or month = "June" [set bonus 1]
+  if month = "April" or month = "May" or month = "June" [set bonus2 1]
+  let etat ""
+  let qbuy 0
+  ask patches with [plabel = ""][set plabel "99"]
+  if buy_whats = "concentrate" [set buy_whats "conc"]
+  if buy_whats = "small ruminant" [set buy_whats "srum"]
+
+  ifelse (buy_whats != "cart" and buy_whats != "tricycle")[
+    ask farmers with [player = idplays][
+      let inc onfarm_inc + offfarm_inc
+      if buy_whats = "cattle" [
+        set qbuy (6 + bonus) * buy_how_muchs
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+
+        if buy_whats = "srum" [
+        set qbuy (1 + bonus) * buy_how_muchs
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+      
+      if buy_whats = "donkey" [
+        set qbuy (3 + bonus) * buy_how_muchs
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1
+        ] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+      
+      if buy_whats = "residue" or buy_whats = "manure" or buy_whats = "grain" or buy_whats = "conc"[
+        set qbuy (2 + bonus2) * buy_how_muchs
+        show inc show qbuy
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+
+      if buy_whats = "poultry" [
+        set qbuy (1 + bonus) * (buy_how_muchs / 10)
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+      
+      if buy_whats = "fertilizer" [
+        set qbuy 1 * buy_how_muchs
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+      
+      if arret = 0 [
+        ask one-of turtles with [typo = buy_whats][
+          hatch buy_how_muchs[
+            if buy_whats = "cattle" or buy_whats = "srum" or buy_whats = "donkey"[set state "skinny"]
+            if buy_whats = "residue" [set shape "star" set hidden? true]
+            if buy_whats = "conc" [set shape "lightning"]
+            set farm item 0 [farm] of farmers with [player = idplays]
+            if buy_whats != "poultry" and buy_whats != "fertilizer" and buy_whats != "conc"[set canmove "yes"
+              move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays])]]
+            if buy_whats = "fertilizer" [set color 96];;used in sow
+            if buy_whats = "manure" [set color 36
+              move-to one-of turtles with [farm = item 0[farm] of farmers with [player = idplays] and shape = "triangle" ]]
+            liens item 0 [farm] of farmers with [player = idplays]
+          ]
+        ]
+      ]
+      
+    ]
+  ][
+    ask farmers with [player = idplays][
+      let inc onfarm_inc + offfarm_inc
+      set qbuy (6 + bonus3) * buy_how_muchs
+      ifelse inc < qbuy [
+        hubnet-send psd "warning" "You do not have enough money. Please try again" 
+        set arret 1] [
+        ifelse qbuy > onfarm_inc[
+          set offfarm_inc inc - qbuy
+          set onfarm_inc 0
+        ][set onfarm_inc onfarm_inc - qbuy]
+      ]
+      
+      if arret = 0 [
+        ask one-of out-link-neighbors with [typo = buy_whats][
+          hatch buy_how_muchs[
+            set farm item 0 [farm] of farmers with [player = idplays]
+            liens item 0 [farm] of farmers with [player = idplays]
+          ]
+        ]
+      ]
+      
+    ]
+  ]
+  ask patches with [plabel = "99"][set plabel ""]
+end
+
