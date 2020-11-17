@@ -72,4 +72,5 @@ to receive-message
   if hubnet-message-tag = "sell_what" [set sell_what hubnet-message]
   if hubnet-message-tag = "amount_sell" [set amount_sell hubnet-message]
   if hubnet-message-tag = "message text" [set message_text hubnet-message]
+  if hubnet-message-tag = "message who" [set message_who hubnet-message]
 end
