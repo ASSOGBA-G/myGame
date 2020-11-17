@@ -1,0 +1,75 @@
+to biomtransfer
+  let idplays idplay
+  liens "1" liens "2" liens "3" liens "4"
+  let arret 0
+
+  let biomsown 0;biomass own by sender
+
+  if send_biomass = "concentrate" [set send_biomass "conc"]
+  if send_biomass = "small ruminant" [set send_biomass "srum"]
+  let send_biomasse send_biomass
+ 
+  ifelse send_biomasse != "money"[
+    ask farmers with [player = idplays][
+      ifelse send_biomasse != "conc" and send_biomasse != "poultry" and send_biomasse != "manure"[
+        set biomsown count out-link-neighbors with [typo = send_biomasse and [pcolor] of patch-here != white ]]
+      [set biomsown count out-link-neighbors with [typo = send_biomasse]]
+    ]
+  ][set biomsown item 0[onfarm_inc] of farmers with [player = idplays ] + item 0[offfarm_inc] of farmers with [player = idplays ]]
+  
+  if send_biomasse = "poultry" [set biomsown biomsown - 1]; remove the fictive one
+  
+  if send_how_much > biomsown [
+    hubnet-send pseudo "warning" "Sender: you cannot send more biomass than you own. Please try again" 
+    set arret 1]
+
+  if arret = 0 [
+  ;;biomass exchange
+  biomflow
+
+  ask biom_owner [die]
+  liens "1" liens "2" liens "3" liens "4"
+  livupdate idplays
+  livupdate send_to
+    
+  hubnet-send pseudo "send_how_much" 0
+  ]
+end
+
+
+to biomflow
+  let idplays idplay
+  let send_biomasse send_biomass
+  let biom_out send_how_much
+  ask farmers with [player = idplays][
+    ifelse send_biomasse != "money"[
+      ifelse send_biomasse != "conc" and send_biomasse != "poultry"  and send_biomasse != "manure"[
+      ask n-of biom_out out-link-neighbors with [typo = send_biomasse and [pcolor] of patch-here != white][
+        set farm item 0[farm] of farmers with [player = send_to]
+      ]][
+        ask n-of biom_out out-link-neighbors with [typo = send_biomasse][
+        set farm item 0[farm] of farmers with [player = send_to]
+      ]]
+    ][
+     ifelse  (onfarm_inc - biom_out) >= 0[
+        set onfarm_inc onfarm_inc - biom_out]
+      [set offfarm_inc offfarm_inc - biom_out + onfarm_inc set onfarm_inc 0]
+      ask farmers with [player = send_to][set onfarm_inc onfarm_inc + biom_out]
+    ]
+  ]
+
+end
+
+to receive-message
+  ;ask joueurs with [idplays = hubnet-message-source][]
+  if hubnet-message-tag = "residue_on_field" [set residue_on_field hubnet-message]
+  if hubnet-message-tag = "send_biomass" [set send_biomass hubnet-message]
+  if hubnet-message-tag = "send_to" [set send_to hubnet-message]
+  if hubnet-message-tag = "send_how_much" [set send_how_much hubnet-message]
+  if hubnet-message-tag = "buy_what" [set buy_what hubnet-message]
+  if hubnet-message-tag = "who_buy" [set who_buy hubnet-message]
+  if hubnet-message-tag = "amount_buy" [set amount_buy hubnet-message]
+  if hubnet-message-tag = "sell_what" [set sell_what hubnet-message]
+  if hubnet-message-tag = "amount_sell" [set amount_sell hubnet-message]
+  if hubnet-message-tag = "message text" [set message_text hubnet-message]
+end
