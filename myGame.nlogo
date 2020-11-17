@@ -1,4 +1,6 @@
 ;;author: Gildas Assogba
+__includes ["biomtransfer.nls" "market.nls" "message.nls"]
+
 globals [
   season;;type of season: 0=bad, 1=good, 2=very good
   saison;; explanation of season, see set up
@@ -22,8 +24,11 @@ globals [
   year
   forage;livestock feeding by farmer
   day;used in reproduce and nextmonth
+  idplayer; list of players
+  nj; index for players list
 ]
 
+breed [joueurs joueur]
 directed-link-breed [biom_owner a-biom_owner]
 directed-link-breed [biom_transfer a-biom_transfer]
 
@@ -35,6 +40,24 @@ patches-own [
  ferti;;fertilized plot?y/n
  manu;;manure applied to plot?y/n
  harvested;;is plot harvested? y/n
+]
+
+joueurs-own [
+  pseudo; name the player use entering the game
+  idplay;
+  residue_on_field
+  send_biomass
+  send_to
+  send_how_much
+  buy_what
+  who_buy
+  amount_buy
+  sell_what
+  who_sell
+  amount_sell
+  biom_weight
+  message_text
+  message_who
 ]
 
 turtles-own [
@@ -74,7 +97,111 @@ turtles-own [
   nf;see livupdate, for fertilizer
 ]
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;HUBNET;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+to startup
+  hubnet-reset
+  set-up
+  listen-clients
+end
+
+to listen-clients
+  while [ hubnet-message-waiting? ] [
+    hubnet-fetch-message
+    ifelse hubnet-enter-message? [
+      create-new-player
+      ask joueurs [update]
+    ] [
+      ifelse hubnet-exit-message? [
+        remove-player
+      ] [
+        ask joueurs with [ pseudo = hubnet-message-source ] [
+          execute-command hubnet-message-tag
+        ]
+      ]
+    ]
+  ]
+end
+
+to create-new-player
+  set idplayer (list "player 1" "player 2" "player 3" "player 4")
+  ifelse nj < 4 [
+  create-joueurs 1 [
+    set pseudo hubnet-message-source
+    set idplay item nj idplayer
+    set hidden? true
+      set residue_on_field 0
+      set send_biomass "residue"
+      set send_to "player 1"
+      set send_how_much 0
+      set buy_what "residue" set who_buy "player 1" set amount_buy 0
+      set sell_what "residue" set who_sell "player 1" set amount_sell 0
+      set biom_weight "skinny"
+      set message_who "player 1"
+  ]
+    set nj nj + 1]
+  [user-message "Maximum number of player reached"]
+end
+
+to remove-player
+  ask joueurs with [pseudo = hubnet-message-source][die]
+end
+
+to go
+  listen-clients
+  ask joueurs [update]
+end
+
+to update
+  let stck 0 let stck2 0 let rskc 0 let rsks 0 let rskd 0
+  let idplays idplay
+  hubnet-send pseudo "nplot" item 0[nplot] of farmers with [player = idplays]
+  hubnet-send pseudo "cattle" item 0[ncow] of farmers with [player = idplays]
+  hubnet-send pseudo "srum" item 0[nsrum] of farmers with [player = idplays]
+  hubnet-send pseudo "donkey" item 0[ndonkey] of farmers with [player = idplays]
+  hubnet-send pseudo "poultry" item 0[npoultry] of farmers with [player = idplays]
+  hubnet-send pseudo "nplot" item 0[nplot] of farmers with [player = idplays]
+  hubnet-send pseudo "fertilizer" item 0[nfertilizer] of farmers with [player = idplays]
+  hubnet-send pseudo "tricycle" item 0[ntricycle] of farmers with [player = idplays]
+  hubnet-send pseudo "cart" item 0[ncart] of farmers with [player = idplays]
+  hubnet-send pseudo "grain" item 0[ngrain] of farmers with [player = idplays]
+  hubnet-send pseudo "residue harv" item 0[nresidue] of farmers with [player = idplays]
+  ask farmers with [player = idplays][
+    set stck count out-link-neighbors with [typo = "residue" and hidden? = true and shape = "star"]
+    set stck2 count out-link-neighbors with [typo = "residue" and hidden? = false and shape = "star"]
+    set rskc count out-link-neighbors with [shape = "cow" and canmove = "yes" and hunger > 0]
+    set rsks count out-link-neighbors with [shape = "sheep" and canmove = "yes" and hunger > 0]
+    set rskd count out-link-neighbors with [shape = "wolf" and canmove = "yes" and hunger > 0]
+  ]
+  hubnet-send pseudo "stock residue" stck
+  hubnet-send pseudo "residue on field" stck2
+  hubnet-send pseudo "manure" item 0[nmanure] of farmers with [player = idplays]
+  hubnet-send pseudo "conc" item 0[nconc] of farmers with [player = idplays]
+  hubnet-send pseudo "manure" item 0[nmanure] of farmers with [player = idplays]
+  hubnet-send pseudo "off farm" item 0[offfarm_inc] of farmers with [player = idplays]
+  hubnet-send pseudo "on farm" item 0[onfarm_inc] of farmers with [player = idplays]
+  hubnet-send pseudo "risky cow" rskc hubnet-send pseudo "risky srum" rsks hubnet-send pseudo "risky donkey" rskd
+  hubnet-send pseudo "food unsecure" item 0[food_unsecure] of farmers with [player = idplays]
+  hubnet-send pseudo "pseudo_" pseudo
+  hubnet-send pseudo "name" idplay
+end
+
+to execute-command [command ]
+  if command = "transfer_biomass" [biomtransfer]
+  if command = "Market" [market]
+  if command = "feed family" [feedfamily idplay livupdate idplay]
+  if command = "send message" [message]
+  if command != "transfer_biomass" and command != "Market"
+  and command != "feed family" and command != "message"[
+   receive-message
+  ]
+end
+
+
 to set-up
+  set nj 0
+  set idplayer (list "player 1" "player 2" "player 3" "player 4")
   clear-all
   set season one-of (range 0 3 1)
   if season = 0 [set saison "Bad :("]
@@ -93,23 +220,23 @@ to nextmonth
   set warn 0
   tick
   set month item ticks mois
-  let players (list "player 1" "player 2" "player 3" "player 4")
+  let players1 (list "player 1" "player 2" "player 3" "player 4")
   let animals (list "cow" "sheep" "wolf")
   let gle (list "1" "2" "3" "4")
   let kk 0
-  foreach players [
+  foreach players1 [
     let jj 0
    foreach animals[
-     livsim item kk players item jj animals
+     livsim item kk players1 item jj animals
       set jj jj + 1
     ]
     liens item kk gle
-    livupdate item kk players
+    livupdate item kk players1
     set kk kk + 1
   ]
   set kk 0
-  set players (list feedconc_p1 feedconc_p2 feedconc_p3 feedconc_p4)
-  foreach players [concfeed item kk players set kk kk + 1]
+  set players1 (list feedconc_p1 feedconc_p2 feedconc_p3 feedconc_p4)
+  foreach players1 [concfeed item kk players1 set kk kk + 1]
   if month = "November" [user-message "You can now harvest :)"]
 
   if ticks = 11 [set year year + 1 set month item 0 mois reset-ticks
@@ -3005,6 +3132,40 @@ count turtles with [farm = \"4\" and\nhunger > 0 and shape = \"wolf\" and \n[pco
 1
 11
 
+BUTTON
+157
+75
+220
+108
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+152
+109
+224
+142
+NIL
+startup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -3474,6 +3635,513 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+VIEW
+366
+24
+766
+424
+0
+0
+0
+1
+1
+1
+1
+1
+0
+1
+1
+1
+0
+12
+-12
+0
+
+SLIDER
+69
+54
+241
+87
+residue_on_field
+residue_on_field
+0.0
+100.0
+0
+1.0
+1
+NIL
+HORIZONTAL
+
+CHOOSER
+62
+133
+154
+178
+send_biomass
+send_biomass
+\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"money\"
+0
+
+INPUTBOX
+60
+184
+157
+244
+send_how_much
+0.0
+1
+0
+Number
+
+CHOOSER
+163
+134
+255
+179
+send_to
+send_to
+\"player 1\" \"player 2\" \"player 3\" \"player 4\"
+0
+
+BUTTON
+166
+195
+260
+228
+transfer_biomass
+NIL
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+
+TEXTBOX
+64
+34
+240
+60
+Proportion of residue to be left on field
+10
+0.0
+1
+
+TEXTBOX
+120
+109
+270
+127
+Biomass transfer
+11
+0.0
+1
+
+CHOOSER
+13
+291
+105
+336
+buy_what
+buy_what
+\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
+0
+
+CHOOSER
+107
+291
+199
+336
+who_buy
+who_buy
+\"player 1\" \"player 2\" \"player 3\" \"player 4\"
+0
+
+INPUTBOX
+205
+291
+279
+351
+amount_buy
+0.0
+1
+0
+Number
+
+CHOOSER
+7
+360
+99
+405
+sell_what
+sell_what
+\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
+0
+
+CHOOSER
+110
+360
+202
+405
+who_sell
+who_sell
+\"player 1\" \"player 2\" \"player 3\" \"player 4\"
+0
+
+INPUTBOX
+209
+360
+278
+420
+amount_sell
+0.0
+1
+0
+Number
+
+BUTTON
+121
+456
+191
+489
+Market
+NIL
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+
+TEXTBOX
+134
+273
+284
+291
+Market
+11
+0.0
+1
+
+MONITOR
+799
+92
+849
+141
+nplot
+NIL
+1
+1
+
+MONITOR
+854
+93
+904
+142
+cattle
+NIL
+0
+1
+
+MONITOR
+909
+93
+959
+142
+srum
+NIL
+0
+1
+
+MONITOR
+1026
+92
+1083
+141
+poultry
+NIL
+0
+1
+
+MONITOR
+964
+93
+1021
+142
+donkey
+NIL
+0
+1
+
+MONITOR
+1090
+92
+1140
+141
+tricycle
+NIL
+0
+1
+
+MONITOR
+1148
+91
+1198
+140
+fertilizer
+NIL
+0
+1
+
+MONITOR
+1206
+91
+1256
+140
+cart
+NIL
+0
+1
+
+MONITOR
+1264
+91
+1314
+140
+grain
+NIL
+0
+1
+
+MONITOR
+800
+153
+872
+202
+residue harv
+NIL
+0
+1
+
+MONITOR
+877
+154
+949
+203
+stock residue
+NIL
+0
+1
+
+MONITOR
+956
+155
+1038
+204
+residue on field
+NIL
+0
+1
+
+MONITOR
+1043
+155
+1100
+204
+conc
+NIL
+0
+1
+
+MONITOR
+1105
+155
+1162
+204
+manure
+NIL
+0
+1
+
+MONITOR
+1171
+156
+1229
+205
+off farm
+NIL
+3
+1
+
+MONITOR
+1238
+155
+1295
+204
+on farm
+NIL
+0
+1
+
+MONITOR
+930
+221
+994
+270
+risky cow
+NIL
+0
+1
+
+MONITOR
+1002
+221
+1071
+270
+risky srum
+NIL
+0
+1
+
+MONITOR
+1078
+222
+1147
+271
+risky donkey
+NIL
+0
+1
+
+MONITOR
+1002
+296
+1079
+345
+food unsecure
+NIL
+3
+1
+
+BUTTON
+1001
+354
+1084
+387
+feed family
+NIL
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+
+TEXTBOX
+997
+57
+1082
+77
+Player stats
+16
+0.0
+1
+
+CHOOSER
+111
+408
+203
+453
+biom_weight
+biom_weight
+\"skinny\" \"medium\" \"fat\" 0
+0
+
+MONITOR
+5
+565
+396
+614
+warning
+NIL
+0
+1
+
+TEXTBOX
+602
+459
+671
+479
+Message
+16
+0.0
+1
+
+INPUTBOX
+477
+495
+701
+630
+message text
+NIL
+1
+1
+String
+
+BUTTON
+707
+572
+793
+605
+send message
+NIL
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+
+CHOOSER
+704
+500
+796
+545
+message who
+message who
+\"player 1\" \"player 2\" \"player 3\" \"player 4\"
+0
+
+MONITOR
+1041
+627
+1157
+676
+pseudo_
+NIL
+0
+1
+
+MONITOR
+1177
+627
+1323
+676
+name
+NIL
+0
+1
+
+TEXTBOX
+1158
+599
+1173
+617
+ID
+11
+0.0
+1
+
 @#$#@#$#@
 default
 0.0
