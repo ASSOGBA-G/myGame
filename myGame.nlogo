@@ -138,7 +138,7 @@ to create-new-player
       set buy_what "residue" set who_buy "player 1" set amount_buy 0
       set sell_what "residue" set who_sell "player 1" set amount_sell 0
       set biom_weight "skinny"
-      set message_who "player 1"
+      ;set message_who "player 1"
   ]
     set nj nj + 1]
   [user-message "Maximum number of player reached"]
