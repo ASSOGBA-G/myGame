@@ -1,0 +1,9 @@
+to message
+  let mid message_who
+  let msg (word message_text ". From: " pseudo)
+  ask joueurs with [idplay = mid][
+    hubnet-send pseudo "message text" msg 
+    hubnet-send pseudo "warning" "You received a new message"
+  ]
+  
+end
