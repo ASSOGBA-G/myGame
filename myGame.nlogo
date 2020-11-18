@@ -207,8 +207,8 @@ to set-up
   if season = 0 [set saison "Bad :("]
   if season = 1 [set saison "Good :)"]
   if season = 2 [set saison "Very good :)"]
-  set mois (list "July" "August" "September" "October" "November" "December"
-    "January" "February" "March" "April" "May" "June")
+  set mois (list "July" "November" "December"
+    "February" "April" "June")
   set farmers turtles with [shape = "person farmer"]
   set month item 0 mois
   set canharvest 0
@@ -239,7 +239,7 @@ to nextmonth
   foreach players1 [concfeed item kk players1 set kk kk + 1]
   if month = "November" [user-message "You can now harvest :)"]
 
-  if ticks = 11 [set year year + 1 set month item 0 mois reset-ticks
+  if ticks = 5 [set year year + 1 set month item 0 mois reset-ticks
   user-message "New season! Time to sow"
     ask farmers with [nplot = 7][set offfarm_inc offfarm_inc + 50]
     ask farmers with [nplot != 7][set offfarm_inc offfarm_inc + 10]
@@ -546,7 +546,7 @@ to resdistrib [typology ferme]
       set ngrain 2
       set nresidue 0
       set nconc one-of (range 0 4 1)
-      set nmanure one-of (range 4 11 1)
+      set nmanure ncow
       set onfarm_inc 20
       set offfarm_inc 10
     ]
@@ -569,7 +569,7 @@ to resdistrib [typology ferme]
       set ngrain 2
       set nresidue 0
       set nconc one-of (range 0 4 1)
-      set nmanure one-of (range 3 11 1)
+      set nmanure ncow
       set onfarm_inc 25
       set offfarm_inc 10
     ]
@@ -592,7 +592,7 @@ to resdistrib [typology ferme]
       set ngrain 2
       set nresidue 0
       set nconc one-of (range 0 6 1)
-      set nmanure one-of (range 5 11 1)
+      set nmanure ncow
       set onfarm_inc 100
       set offfarm_inc 50
     ]
@@ -616,7 +616,7 @@ to resdistrib [typology ferme]
       set ngrain 3
       set nresidue 0
       set nconc one-of (range 7 21 1)
-      set nmanure one-of (range 3 8 1)
+      set nmanure ncow
       set onfarm_inc 100
       set offfarm_inc 10
     ]
@@ -628,10 +628,14 @@ end
 to sow
   ifelse month = "July" [
     ;set farmers turtles with [shape = "person farmer"]
-    ask turtles-on patches with [pcolor = rgb 0 255 0][die]
+    ask turtles-on patches with [pcolor = rgb 0 255 0][
+      if typo != "fertilizer" or typo !="manure" and hidden? = false[
+        die]
+    ]
     set farmi [farm] of farmers
     let n 0
     let m 0
+
     foreach farmi [
       ask turtles with [farm = item n farmi and shape = "person farmer"][
         ;show nplot
@@ -642,6 +646,7 @@ to sow
         ask patches with [plabel = ""][set plabel "99"]
         let fin patches with [(read-from-string plabel) = posi and pcolor != white]
         ask patch-here[
+          ;;seed
           sprout nseed [
             set typo "seed2"
             set farm item n farmi
@@ -650,9 +655,19 @@ to sow
             set color 125
             move-to one-of fin with [count turtles-here = 0]
           ]
+          ;;old fertilizer/manure
+          ask turtles with [[pcolor] of patch-here = rgb 0 255 0 and
+            typo = "fertilizer" or typo = "manure" and hidden? = true
+            and farm = item n farmi][
+            set hidden? false
+            set farm item n farmi
+            move-to one-of fin with [count turtles-here with [typo ="seed2"] > 0]
+          ]
+
+
           sprout nman [
-           set typo "manure"
-           set shape "triangle"
+            set typo "manure"
+            set shape "triangle"
            set color 35
            set size .5
            move-to one-of fin with [count turtles-here >= 1]
@@ -692,14 +707,30 @@ to sow
       ;]
       set n n + 1
     ]
+
+    ask patches with [pcolor = rgb 0 255 0 and
+      count turtles-here with [typo = "fertilizer"] > 2 or
+      count turtles-here with [typo = "manure"] > 2
+    ][
+     let rfert count turtles-here with [typo = "fertilizer"] - 2
+     let rmanure count turtles-here with [typo = "manure"] - 2
+      let farma item 0 [farm] of turtles-here
+      sprout rfert [set typo "fertilizer" set shape "drop"
+        set color 95 set size .5 set hidden? true
+        set farm farma]
+      sprout rmanure [set typo "manure" set shape "triangle"
+        set color 35 set size .5 set hidden? true
+        set farm farma]
+    ];;conserve unused manure and fertilizer
+
     ask turtles-on patches with [pcolor = rgb 0 255 0][set label ""]
     ask patches with [plabel = "99"][set plabel ""]
     let seeds turtles with [typo = "seed2"]
-    ask farmers [set nmanure 0 set nfertilizer 0 set ngrain 0]
+    ;ask farmers [set nmanure 0 set nfertilizer 0 set ngrain 0]
     ask turtles with [typo = "fertilizer" and color = 96][die]
     ask turtles with [typo = "fertilizer" and color = 97][die]
     ask turtles with [typo = "manure" and color = 36][die]
-
+    liens "1" liens "2" liens "3" liens "4"
   ]
   [user-message "You cannot sow, wait for July"]
 
@@ -707,40 +738,17 @@ end
 
 to grow [taille]
   let g ""; variable to check the period is suitable for growing crops
-  if month = "August" [set taille .5 set g "ok"]
-  if month = "September" [set taille .75 set g "ok"]
-  if month = "October" [set g "ok"]
+  if month = "July" [set g "ok"]
   if g = "ok" [
     ask turtles-on patches with [pcolor = rgb 0 255 0][
-      ask turtles-here with [typo = "seed2" or typo = "crop"][
-        ask patch-here [
-          if month = "August"[
-            sprout 1 [
-              set typo "crop"
-              set shape "flower"
-              set size taille
-              set color yellow
-            ]
-            set cultiv "yes"
-          ]
-        ]
-      ]
-    ]
-
-    ifelse month != "August" [
-      ask turtles with [typo = "crop" ][
-        set size 0.75
-      ]
-    ]
-    [ask turtles-on patches with [pcolor = rgb 0 255 0][
-      ask turtles-here with [typo = "seed2" or typo = "fertilizer" or typo = "manure"][
+      ask turtles-here with [typo = "seed2" or typo = "fertilizer" or typo = "manure" and hidden? = false][
         ask patch-here [
           set ferti count turtles-here with [typo = "fertilizer"]
           set manu count turtles-here with [typo = "manure"]
+          set cultiv "yes"
         ]
 
         die
-      ]
       ]
     ]
     produce;;calculate harvest and display it
@@ -755,10 +763,10 @@ to produce
   let n 0
 
   ;;basic prod according ot season
-  if season = 0 [set ngseason 1 set nrseason 15]
-  if season = 1 [set ngseason 2 set nrseason 18]
-  if season = 2 [set ngseason 3 set nrseason 20]
-  if month = "October" [
+  if season = 0 [set ngseason 1 set nrseason 10]
+  if season = 1 [set ngseason 2 set nrseason 11]
+  if season = 2 [set ngseason 3 set nrseason 12]
+  if month = "July" [
     ask patches with [plabel = ""][set plabel "99"]
     foreach farmi [
 
@@ -821,9 +829,9 @@ to produce
         ]
 
 
-      ask patches with [plabel = "99"][set plabel ""]
-    ask turtles with [shape = "flower"][die]
-    ]
+    ask patches with [plabel = "99"][set plabel ""]
+    ;ask turtles with [shape = "flower"][die]
+  ]
 
 
 end
@@ -893,7 +901,7 @@ end
 to bush
   ifelse (month = "August" or month = "September" or month = "October")[
     ask bushplot [
-      sprout 5 [
+      sprout 3 [
         set shape "box"
         set size .25
         set color 135
@@ -1105,18 +1113,19 @@ to livupdate [gamer]
     set npoultry count out-link-neighbors with[shape = "bird"] - 1; remove the ficitve one
     set ngrain count out-link-neighbors with[shape = "cylinder" and [pcolor] of patch-here != white]
     set nconc count out-link-neighbors with[typo = "conc"] - 1; remove the ficitve one
-    ;ifelse ticks > 1 [set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1]; remove the ficitve one
-    ;[ifelse nf < 1 [set nfertilizer nfertilizer + count out-link-neighbors with[typo = "fertilizer"] - 1 set nf nf + 1]
-    ;  [set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1]
-    ;]
+                                                              ;ifelse ticks > 1 [set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1]; remove the ficitve one
+                                                              ;[ifelse nf < 1 [set nfertilizer nfertilizer + count out-link-neighbors with[typo = "fertilizer"] - 1 set nf nf + 1]
+                                                              ;  [set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1]
+                                                              ;]
     set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1
-    set nmanure count out-link-neighbors with[typo = "manure"] - 1
+    if ticks > 0 [
+      set nmanure count out-link-neighbors with[typo = "manure"] - 1]
   ]
 end
 
 to directfeed [gamer]
   let farmlab item 0 [farm] of farmers with [player = gamer]
-  if (count turtles with [(shape = "cow" or shape = "sheep" or shape = "wolf") and hunger > 0 and farm = farmlab] > 0) [
+  if (count turtles with [(shape = "cow" or shape = "sheep" or shape = "wolf") and hunger > 0 and grazed != "yes" and farm = farmlab] > 0) [
     ask farmers with [player = gamer][
       set forage count out-link-neighbors with [shape = "star" and hidden? = true]
       let fourrage forage
@@ -1508,6 +1517,10 @@ to market-buy [gamer biomass]
             move-to one-of turtles with [farm = item 0[farm] of farmers with [player = gamer] and shape = "triangle" ]]
           liens item 0 [farm] of farmers with [player = gamer]
         ]
+      ]
+      if ticks = 0[
+        if biomass = "manure" [set nmanure nmanure + buy_how_much]
+        if biomass = "fertilizer" [set nfertilizer nfertilizer + buy_how_much]
       ]
     ]
   ][
@@ -2670,7 +2683,7 @@ CHOOSER
 biomass_sender
 biomass_sender
 "player 1" "player 2" "player 3" "player 4"
-0
+1
 
 CHOOSER
 342
@@ -2690,7 +2703,7 @@ CHOOSER
 biomass_sent
 biomass_sent
 "residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "money"
-2
+0
 
 CHOOSER
 341
@@ -2700,7 +2713,7 @@ CHOOSER
 biomass_counterpart
 biomass_counterpart
 "residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "money"
-0
+8
 
 INPUTBOX
 210
@@ -2732,7 +2745,7 @@ CHOOSER
 buy
 buy
 "residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "fertilizer" "cart" "tricyle"
-0
+1
 
 CHOOSER
 342
@@ -2842,7 +2855,7 @@ BUTTON
 386
 447
 Apply biomass transfer
-biomfluxes biomass_sender biomass_receiver biomass_sent biomass_counterpart
+biomfluxes biomass_sender biomass_receiver biomass_sent biomass_counterpart\nset biomass_sent_amount 0\nset biomass_in_amount 0
 NIL
 1
 T
