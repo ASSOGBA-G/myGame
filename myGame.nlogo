@@ -185,6 +185,8 @@ to update
   hubnet-send pseudo "food unsecure" item 0[food_unsecure] of farmers with [player = idplays]
   hubnet-send pseudo "pseudo_" pseudo
   hubnet-send pseudo "name" idplay
+  hubnet-send pseudo "month" month
+  hubnet-send pseudo "year" year
 end
 
 to execute-command [command ]
@@ -4151,6 +4153,36 @@ TEXTBOX
 1173
 617
 ID
+11
+0.0
+1
+
+MONITOR
+1159
+512
+1242
+561
+month
+NIL
+0
+1
+
+MONITOR
+1075
+513
+1132
+562
+year
+NIL
+0
+1
+
+TEXTBOX
+1138
+474
+1168
+492
+Time
 11
 0.0
 1
