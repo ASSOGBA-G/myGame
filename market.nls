@@ -196,11 +196,21 @@ to marche-buy
             if buy_whats = "residue" [set shape "star" set hidden? true]
             if buy_whats = "conc" [set shape "lightning"]
             set farm item 0 [farm] of farmers with [player = idplays]
-            if buy_whats != "poultry" and buy_whats != "fertilizer" and buy_whats != "conc"[set canmove "yes"
-              move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays])]]
-            if buy_whats = "fertilizer" [set color 96];;used in sow
-            if buy_whats = "manure" [set color 36
-              move-to one-of turtles with [farm = item 0[farm] of farmers with [player = idplays] and shape = "triangle" ]]
+            if buy_whats != "poultry" and buy_whats != "conc"[set canmove "yes"
+              move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays])]
+              if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                count turtles-here < 2]
+              [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                count turtles-here < 2]]
+              
+              if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                count turtles-here = 0]
+              [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                count turtles-here = 0]]
+            
+            ]
+            if buy_whats = "fertilizer" [set color 96 set size .75 set heading one-of (range 0 360 45)];;used in sow
+            if buy_whats = "manure" [set color 36 set size .75 set heading one-of (range 0 360 45)]
             liens item 0 [farm] of farmers with [player = idplays]
           ]
         ]
