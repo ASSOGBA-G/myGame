@@ -14,8 +14,9 @@ globals [
   farmi;;list of farms
   graine
   resid
+  accessresid;;access to residue y/n
   mn;;event: manure creation on bushplot, happen once
-  cc;;cattle creation for farm, happen once
+  cc;;animal creation for farm, happen once
   maxc maxr maxd maxp maxrc;;number of farm owing a certain type of animal
   canharvest;
   exchg;if one biomass exchange already occured, used in biomexchange
@@ -26,6 +27,7 @@ globals [
   day;used in reproduce and nextmonth
   idplayer; list of players
   nj; index for players list
+  output;;data to be exported in separated file
 ]
 
 breed [joueurs joueur]
@@ -58,6 +60,7 @@ joueurs-own [
   biom_weight
   message_text
   message_who
+  open_field?
 ]
 
 turtles-own [
@@ -88,6 +91,7 @@ turtles-own [
   energy;;of livestock
   neat;;number of times a residue agent is grazed
   open;;residue available for grazing
+  foreignaccess;; other farm can access residue?
   grazed;;animal already ate?
   state;of livestock skinny medium fat
   repro;if an animal already reproduce during one year, y/n
@@ -138,7 +142,8 @@ to create-new-player
       set buy_what "residue" set who_buy "player 1" set amount_buy 0
       set sell_what "residue" set who_sell "player 1" set amount_sell 0
       set biom_weight "skinny"
-      ;set message_who "player 1"
+      set open_field? true
+      set message_who "player 1"
   ]
     set nj nj + 1]
   [user-message "Maximum number of player reached"]
@@ -202,9 +207,12 @@ end
 
 
 to set-up
+  ;clear-drawing clear-patches
+  clear-all-plots clear-patches
+  ask turtles with [breed != joueurs][die]
   set nj 0
+  set cc 0
   set idplayer (list "player 1" "player 2" "player 3" "player 4")
-  clear-all
   set season one-of (range 0 3 1)
   if season = 0 [set saison "Bad :("]
   if season = 1 [set saison "Good :)"]
@@ -216,6 +224,17 @@ to set-up
   set canharvest 0
   set year 1
   reset-ticks
+  set output (word
+    (list "step" "year" "month" "p1type" "p2type" "p3type" "p4type" "p1cattle" "p2cattle" "p3cattle" "p4cattle"
+      "p1srum" "p2srum" "p3srum" "p4srum" "p1donkey" "p2donkey" "p3donkey" "p4donkey" "p1famsize" "p2famsize"
+      "p3famsize" "p4famsize" "p1cart" "p2cart" "p3cart" "p4cart" "p1trcycl" "p2trcycl" "p3trcycl" "p4trcycl"
+      "p1fert" "p2fert" "p3fert" "p4fert" "p1man" "p2man" "p3man" "p4man" "p1residstck" "p2residstck" "p3residstck" "p4residstck"
+      "p1residsoil" "p2residsoil" "p3residsoil" "p4residsoil" "p1residsoilp" "p2residsoilp" "p3residsoilp" "p4residsoilp"
+      "p1conc" "p2conc" "p3conc" "p4conc" "p1fdunsec" "p2fdunsec" "p3fdunsec" "p4fdunsec" "p1onfinc" "p2onfinc" "p3onfinc" "p4onfinc"
+      "p1offinc" "p2offinc" "p3offinc" "p4offinc" "p1biomsent" "p1biomsentamount" "p1biomsentto"
+      "p2biomsent" "p2biomsentamount" "p2biomsentto" "p3biomsent" "p3biomsentamount" "p3biomsentto"
+      "p4biomsent" "p4biomsentamount" "p4biomsentto")
+  )
 end
 
 to nextmonth
@@ -239,7 +258,7 @@ to nextmonth
   set kk 0
   set players1 (list feedconc_p1 feedconc_p2 feedconc_p3 feedconc_p4)
   foreach players1 [concfeed item kk players1 set kk kk + 1]
-  if month = "November" [user-message "You can now harvest :)"]
+  ;if month = "November" [user-message "You can now harvest :)"]
 
   if ticks = 5 [set year year + 1 set month item 0 mois reset-ticks
   user-message "New season! Time to sow"
@@ -420,7 +439,14 @@ to environment
     liens item ii farmi
     set ii ii + 1
   ]
-  initbush
+
+  initbush;;create bush biomass
+  ;fix heading of resources on white patches
+  ask turtles with [typo = "manure" or typo = "fertilizer"
+    or typo = "cattle" or typo = "srum"][
+    set heading 0
+  ]
+
   let players (list "player 1" "player 2" "player 3" "player 4")
   let animals (list "cow" "sheep" "wolf" "bird")
   let gle (list "1" "2" "3" "4")
@@ -433,8 +459,11 @@ to environment
     ]
     ;liens item kk gle
     ask farmers with [player = item kk players][
+      ask patches with [plabel = ""][set plabel "99"]
+      let poss pos
       let nb nconc
       let nfert nfertilizer
+      let nman nmanure
       ask out-link-neighbors with [shape = "lightning"] [
        hatch nb
       ]
@@ -443,24 +472,48 @@ to environment
         hatch nfert [
           set typo "fertilizer"
           set shape "drop"
-          set color 97
-          set size .5
+          set color 96
+          set size .75
+          set heading one-of (range 0 360 90)
+          move-to one-of patches with [(read-from-string plabel) = poss ]
+          if any? patches with [(read-from-string plabel) = poss and
+            count turtles-here < 2]
+          [move-to one-of patches with [(read-from-string plabel) = poss and
+            count turtles-here < 2]]
+
+          if any? patches with [(read-from-string plabel) = poss and
+            count turtles-here = 0]
+          [move-to one-of patches with [(read-from-string plabel) = poss and
+            count turtles-here = 0]]
         ]
       ]
       ask out-link-neighbors with [shape = "triangle"][
-        hatch nfert [
+        hatch nman [
           set typo "manure"
           set shape "triangle"
           set color 36
-          set size .5
+          set size .75
+          set heading one-of (range 0 360 90)
+          move-to one-of patches with [(read-from-string plabel) = poss ]
+          if any? patches with [(read-from-string plabel) = poss and
+            count turtles-here < 2]
+          [move-to one-of patches with [(read-from-string plabel) = poss and
+            count turtles-here < 2]]
+
+          if any? patches with [(read-from-string plabel) = poss and
+            count turtles-here = 0]
+          [move-to one-of patches with [(read-from-string plabel) = poss and
+            count turtles-here = 0]]
         ]
       ]
+      ask patches with [plabel = "99"][set plabel ""]
     ]
 
     liens item kk gle
     livupdate item kk players
     set kk kk + 1
   ]
+
   ;set kk 0
 
   ;foreach players [
@@ -630,6 +683,10 @@ end
 to sow
   ifelse month = "July" [
     ;set farmers turtles with [shape = "person farmer"]
+    ask turtles with [typo = "fertilizer" and color = 96][die]
+    ask turtles with [typo = "fertilizer" and color = 97][die]
+    ask turtles with [typo = "manure" and color = 36][die]
+
     ask turtles-on patches with [pcolor = rgb 0 255 0][
       if typo != "fertilizer" or typo !="manure" and hidden? = false[
         die]
@@ -655,7 +712,7 @@ to sow
             set label farm
             set shape "dot"
             set color 125
-            move-to one-of fin with [count turtles-here = 0]
+            move-to one-of fin with [count turtles-here with [typo ="seed2"] = 0]
           ]
           ;;old fertilizer/manure
           ask turtles with [[pcolor] of patch-here = rgb 0 255 0 and
@@ -670,25 +727,27 @@ to sow
           sprout nman [
             set typo "manure"
             set shape "triangle"
-           set color 35
-           set size .5
-           move-to one-of fin with [count turtles-here >= 1]
+            set farm item n farmi
+            set color 35
+            set size .5
+            move-to one-of fin with [count turtles-here >= 1]
             if count turtles-here with [typo = "manure"] > 2 [
               if any? patches with [(read-from-string plabel) = posi and pcolor != white
                 and count turtles-here with [typo = "manure"] < 2 and count turtles-here with [typo = "seed2"] > 0][
                 let destination patches with [(read-from-string plabel) = posi and pcolor != white
-                and count turtles-here with [typo = "manure"] < 2 and count turtles-here with [typo = "seed2"] > 0]
+                  and count turtles-here with [typo = "manure"] < 2 and count turtles-here with [typo = "seed2"] > 0]
                 move-to one-of destination;; try to put max of 2 manure per plot as beyond yield do not increase
               ]
             ]
           ]
 
           sprout nfert [
-           set typo "fertilizer"
-           set shape "drop"
-           set color 95
-           set size .5
-           move-to one-of fin with [count turtles-here >= 1]
+            set typo "fertilizer"
+            set shape "drop"
+            set color 95
+            set farm item n farmi
+            set size .5
+            move-to one-of fin with [count turtles-here >= 1]
             if count turtles-here with [typo = "fertilizer"] > 2 [
               if any? patches with [(read-from-string plabel) = posi and pcolor != white
               and count turtles-here < 5 and count turtles-here with [typo = "seed2"] > 0][
@@ -710,28 +769,30 @@ to sow
       set n n + 1
     ]
 
-    ask patches with [pcolor = rgb 0 255 0 and
-      count turtles-here with [typo = "fertilizer"] > 2 or
-      count turtles-here with [typo = "manure"] > 2
-    ][
-     let rfert count turtles-here with [typo = "fertilizer"] - 2
-     let rmanure count turtles-here with [typo = "manure"] - 2
-      let farma item 0 [farm] of turtles-here
-      sprout rfert [set typo "fertilizer" set shape "drop"
-        set color 95 set size .5 set hidden? true
-        set farm farma]
-      sprout rmanure [set typo "manure" set shape "triangle"
-        set color 35 set size .5 set hidden? true
-        set farm farma]
-    ];;conserve unused manure and fertilizer
+    ;;conserve unused manure and fertilizer
+    ask turtles with [typo = "fertilizer" and [pcolor] of patch-here != white][
+      if count turtles-here with [typo = "fertilizer" and hidden? = false] > 2 [
+       let rfert count turtles-here with [typo = "fertilizer" and hidden? = false] - 2
+        ask n-of rfert turtles-here with [typo = "fertilizer" and hidden? = false][
+         set color 95 set hidden? true set size .5
+        ]
+      ]
+    ]
+
+    ask turtles with [typo = "manure" and [pcolor] of patch-here != white][
+      if count turtles-here with [typo = "manure" and hidden? = false] > 2 [
+       let rfert count turtles-here with [typo = "manure" and hidden? = false] - 2
+        show rfert
+        ask n-of rfert turtles-here with [typo = "manure" and hidden? = false][
+         set color 35 set hidden? true set size .5
+        ]
+      ]
+    ]
 
     ask turtles-on patches with [pcolor = rgb 0 255 0][set label ""]
     ask patches with [plabel = "99"][set plabel ""]
     let seeds turtles with [typo = "seed2"]
     ;ask farmers [set nmanure 0 set nfertilizer 0 set ngrain 0]
-    ask turtles with [typo = "fertilizer" and color = 96][die]
-    ask turtles with [typo = "fertilizer" and color = 97][die]
-    ask turtles with [typo = "manure" and color = 36][die]
     liens "1" liens "2" liens "3" liens "4"
   ]
   [user-message "You cannot sow, wait for July"]
@@ -745,9 +806,10 @@ to grow [taille]
     ask turtles-on patches with [pcolor = rgb 0 255 0][
       ask turtles-here with [typo = "seed2" or typo = "fertilizer" or typo = "manure" and hidden? = false][
         ask patch-here [
-          set ferti count turtles-here with [typo = "fertilizer"]
-          set manu count turtles-here with [typo = "manure"]
+          set ferti count turtles-here with [typo = "fertilizer" and hidden? = false]
+          set manu count turtles-here with [typo = "manure" and hidden? = false]
           set cultiv "yes"
+          ;show manu
         ]
 
         die
@@ -876,6 +938,17 @@ to harvest [presid gamer]
         set ngrain graine ;- 1; remove the ficitve one white plot
         set nresidue resid ;- 1; remove the ficitve one white plot
         set nresiduep count out-link-neighbors with [typo = "residue" and hidden? = false and shape = "star"];;residue on field
+
+        ;;other farms access residue left on field
+        if player = "player 1" [set accessresid open_field1?]
+        if player = "player 2" [set accessresid open_field2?]
+        if player = "player 3" [set accessresid open_field3?]
+        if player = "player 4" [set accessresid open_field4?]
+        if any? joueurs with [idplay = gamer][
+          set accessresid item 0 [open_field?] of joueurs with [idplay = gamer]];;player has priority on game master
+        ask out-link-neighbors with [typo = "residue" and shape = "star"][
+          if accessresid = true [set foreignaccess "yes"]
+        ]
       ]
 
       ask turtles with [typo = "residue" and shape = "star"] [set open "yes"]
@@ -947,7 +1020,7 @@ to livsim [gamer animal]
   if cc <= maxrc [
     set cc cc + 1
     ask farmers with [player = gamer][
-      if animal ="cow" [set nanim ncow set sz 1]
+      if animal ="cow" [set nanim ncow set sz 1.25]
       if animal = "sheep"[set nanim nsrum set sz .75]
       if animal = "wolf"[set nanim ndonkey set sz 1]
       if animal = "bird"[set nanim npoultry set sz 1]
@@ -960,6 +1033,7 @@ to livsim [gamer animal]
             set state "skinny"
             set repro "no"
             set canmove "yes"
+            if random 101 > 50 [lt 1]
             move-to one-of patches with [pcolor = (rgb 0 100 0)]
           ]
         ]
@@ -1052,21 +1126,23 @@ to grazeresidue [gamer animal]
   let farmpos item 0 [pos] of farmers with [player =  gamer]
   let cow turtles with [shape = animal and canmove = "yes" and farm = farmlab]
 
-     ;;cows movements on agricultural plots
-  ask cow with [grazed != "yes"][if any? turtles with [shape = "star" and open = "yes" and farm = farmlab and hidden? = false][
-    move-to one-of turtles with [shape = "star" and open = "yes" and farm = farmlab and hidden? = false]
+     ;;animals movements on agricultural plots
+  ask cow with [grazed != "yes"][if any? turtles with [(shape = "star" and open = "yes" and hidden? = false) and
+    (farm = farmlab or foreignaccess = "yes")][
+    move-to one-of turtles with [(shape = "star" and open = "yes" and hidden? = false) and
+    (farm = farmlab or foreignaccess = "yes")]
     ]
   ]
 
 
-  ask cow with [grazed != "yes"][
-    ifelse any? turtles-here with[shape = "star" and open = "yes" and farm = farmlab][][
-      if any? turtles with[shape = "star" and open = "yes" and farm = farmlab and hidden? = false] [
-        move-to one-of cultivplot with [count turtles-here with [shape = "star" and open ="yes" and farm = farmlab and hidden? = false] > 0]
-      ]
-    ]
+ ; ask cow with [grazed != "yes"][
+ ;   ifelse any? turtles-here with[shape = "star" and open = "yes" and farm = farmlab][][
+ ;     if any? turtles with[shape = "star" and open = "yes" and farm = farmlab and hidden? = false] [
+ ;       move-to one-of cultivplot with [count turtles-here with [shape = "star" and open ="yes" and farm = farmlab and hidden? = false] > 0]
+ ;     ]
+ ;   ]
 
-  ]
+ ; ]
 
 
   ;;eating residue
@@ -1076,22 +1152,22 @@ to grazeresidue [gamer animal]
     if any? turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [
       ask turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [
         ifelse (animal = "cow" or animal = "wolf") [
-          set kil count turtles-here with [(shape = "cow" or shape ="wolf") and farm = farmlab]
+          set kil count turtles-here with [(shape = "cow" or shape ="wolf")]
           set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false]
           if kil > kild [set kil kild]
           ask n-of kil turtles-here with[shape = "star" and farm = farmlab and hidden? = false][die]
         ]
 
         [
-          if count turtles-here with [shape = "sheep" and farm = farmlab and hidden? = false] = 1 [
+          if count turtles-here with [shape = "sheep" and hidden? = false] = 1 [
             ifelse neat = 2 [
               ask one-of turtles-here with[shape = "star" and farm = farmlab and hidden? = false and neat = 2][die]
             ]
 
             [ set neat neat + 1]
           ]
-          if count turtles-here with [shape = "sheep" and farm = farmlab] >= 2 [
-            set kil count turtles-here with [shape = "sheep" and farm = farmlab]
+          if count turtles-here with [shape = "sheep" ] >= 2 [
+            set kil count turtles-here with [shape = "sheep" ]
             set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false]
             if (kil / 2) > kild [set kil kild]
             ask n-of ceiling (kil / 2) turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [die]
@@ -1512,11 +1588,21 @@ to market-buy [gamer biomass]
           if biomass = "residue" [set shape "star" set hidden? true]
           if biomass = "conc" [set shape "lightning"]
           set farm item 0 [farm] of farmers with [player = gamer]
-          if biomass != "poultry" and biomass != "fertilizer" and biomass != "conc"[set canmove "yes"
-            move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = gamer])]]
-          if biomass = "fertilizer" [set color 96];;used in sow
-          if biomass = "manure" [set color 36
-            move-to one-of turtles with [farm = item 0[farm] of farmers with [player = gamer] and shape = "triangle" ]]
+          if biomass != "poultry" and biomass != "conc"[set canmove "yes"
+            move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = gamer])]
+            if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = gamer]) and
+              count turtles-here < 2]
+            [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = gamer]) and
+              count turtles-here < 2]]
+
+            if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = gamer]) and
+              count turtles-here = 0]
+            [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = gamer]) and
+              count turtles-here = 0]]
+
+          ]
+          if biomass = "fertilizer" [set color 96 set size .75 set heading one-of (range 0 360 45)];;used in sow
+          if biomass = "manure" [set color 36 set size .75 set heading one-of (range 0 360 45)]
           liens item 0 [farm] of farmers with [player = gamer]
         ]
       ]
@@ -1631,29 +1717,12 @@ ticks
 30.0
 
 BUTTON
-2
-49
-145
-82
-create game environment
-environment
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-3
-12
-70
-45
-NIL
+28
+43
+95
+76
 set-up
+set-up\nenvironment
 NIL
 1
 T
@@ -1672,7 +1741,7 @@ CHOOSER
 player1pos
 player1pos
 1 2 3 4
-3
+0
 
 CHOOSER
 2
@@ -1682,7 +1751,7 @@ CHOOSER
 player2pos
 player2pos
 1 2 3 4
-2
+1
 
 CHOOSER
 104
@@ -1692,7 +1761,7 @@ CHOOSER
 player3pos
 player3pos
 1 2 3 4
-0
+2
 
 CHOOSER
 104
@@ -1702,7 +1771,7 @@ CHOOSER
 player4pos
 player4pos
 1 2 3 4
-1
+3
 
 TEXTBOX
 28
@@ -1929,46 +1998,12 @@ item 0 [offfarm_inc] of turtles with [\nplayer = \"player 1\" and \nshape = \"pe
 11
 
 BUTTON
-225
-10
-344
-43
-Grow crops and grass
-grow [0]
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
 534
 428
 812
 461
 Next step
-grow [0]\nharvest presid1 \"player 1\"\nharvest presid2 \"player 2\"\nharvest presid3 \"player 3\"\nharvest presid4 \"player 4\"\nfeedfamily \"player 1\"\nfeedfamily \"player 2\"\nfeedfamily \"player 3\"\nfeedfamily \"player 4\"\nset buy_how_much 0\nset sell_how_much 0\nset biomass_sent_amount 0\nset biomass_in_amount 0\nnextmonth
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-349
-12
-426
-45
-Harvest
-harvest presid1 \"player 1\"\nharvest presid2 \"player 2\"\nharvest presid3 \"player 3\"\nharvest presid4 \"player 4\"\nuser-message \"Feed your family with the grain harvested before next step\"
+if ticks = 0 [plot-pen-down]\nif month = \"July\" [sow]\ngrow [0]\nharvest presid1 \"player 1\"\nharvest presid2 \"player 2\"\nharvest presid3 \"player 3\"\nharvest presid4 \"player 4\"\nfeedfamily \"player 1\"\nfeedfamily \"player 2\"\nfeedfamily \"player 3\"\nfeedfamily \"player 4\"\nset buy_how_much 0\nset sell_how_much 0\nset biomass_sent_amount 0\nset biomass_in_amount 0\nnextmonth
 NIL
 1
 T
@@ -1980,10 +2015,10 @@ NIL
 1
 
 SLIDER
-231
-93
-323
-126
+228
+54
+320
+87
 presid1
 presid1
 0
@@ -1995,10 +2030,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-330
-93
-422
-126
+327
+54
+420
+88
 presid2
 presid2
 0
@@ -2010,10 +2045,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-232
-150
-324
-183
+227
+163
+319
+196
 presid3
 presid3
 0
@@ -2025,10 +2060,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-332
-150
-424
-183
+327
+163
+419
+196
 presid4
 presid4
 0
@@ -2040,50 +2075,50 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-222
-52
-426
-70
+207
+13
+439
+32
 Proportion of residue left on field
 14
 0.0
 1
 
 TEXTBOX
-257
-74
-311
-92
+254
+35
+308
+53
 Player 1
 12
 0.0
 1
 
 TEXTBOX
-353
-73
-399
-91
+350
+34
+396
+52
 Player 2
 12
 0.0
 1
 
 TEXTBOX
-259
-130
-306
-148
+254
+143
+301
+161
 Player 3
 12
 0.0
 1
 
 TEXTBOX
-352
-130
-396
-148
+347
+143
+391
+161
 Player 4
 12
 0.0
@@ -2234,7 +2269,7 @@ item 0 [nresidue] of turtles with [\nplayer = \"player 2\" and \nshape = \"perso
 MONITOR
 944
 201
-1019
+1020
 246
 stock residue
 count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"]
@@ -2245,7 +2280,7 @@ count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"]
 MONITOR
 1021
 202
-1107
+1108
 247
 residue on field
 count turtles\nwith [farm = \"2\" and\n hidden? = false and shape = \"star\"]
@@ -2648,80 +2683,80 @@ item 0 [onfarm_inc] of turtles with [\nplayer = \"player 4\" and \nshape = \"per
 11
 
 TEXTBOX
-274
-193
-389
-233
+270
+252
+399
+292
 Biomass fluxes between players
 16
 0.0
 1
 
 TEXTBOX
-244
-233
-278
-251
+240
+292
+283
+311
 Send
 14
 0.0
 1
 
 TEXTBOX
-367
-236
-419
-254
+365
+290
+429
+309
 Receive
 14
 0.0
 1
 
 CHOOSER
-224
-255
-316
-300
+220
+313
+312
+358
 biomass_sender
 biomass_sender
 "player 1" "player 2" "player 3" "player 4"
 1
 
 CHOOSER
-342
-256
-434
-301
+338
+314
+430
+359
 biomass_receiver
 biomass_receiver
 "player 1" "player 2" "player 3" "player 4"
 3
 
 CHOOSER
-224
-302
-316
-347
+220
+360
+312
+405
 biomass_sent
 biomass_sent
 "residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "money"
 0
 
 CHOOSER
-341
-303
-451
-348
+337
+362
+447
+407
 biomass_counterpart
 biomass_counterpart
 "residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "money"
 8
 
 INPUTBOX
-210
-349
-328
-409
+205
+408
+323
+468
 biomass_sent_amount
 0.0
 1
@@ -2729,10 +2764,10 @@ biomass_sent_amount
 Number
 
 INPUTBOX
-342
-349
-451
-409
+338
+408
+447
+468
 biomass_in_amount
 0.0
 1
@@ -2740,30 +2775,30 @@ biomass_in_amount
 Number
 
 CHOOSER
-134
-528
-226
-573
+127
+588
+219
+633
 buy
 buy
 "residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "fertilizer" "cart" "tricyle"
-1
+8
 
 CHOOSER
-342
-527
-434
-572
+334
+587
+426
+632
 sell
 sell
 "residue" "manure" "grain" "concentrate" "cattle" "srum" "donkey" "poultry" "fertilizer" "cart" "tricyle"
 1
 
 INPUTBOX
-230
-531
-317
-591
+222
+590
+309
+650
 buy_how_much
 0.0
 1
@@ -2771,10 +2806,10 @@ buy_how_much
 Number
 
 INPUTBOX
-437
-529
-526
+429
 589
+518
+649
 sell_how_much
 0.0
 1
@@ -2782,30 +2817,30 @@ sell_how_much
 Number
 
 TEXTBOX
-303
-461
-360
-481
+295
+520
+352
+540
 Market
 16
 0.0
 1
 
 CHOOSER
-225
-481
-317
-526
+217
+540
+309
+585
 buyer
 buyer
 "player 1" "player 2" "player 3" "player 4"
 3
 
 CHOOSER
-342
-480
-434
-525
+334
+539
+426
+584
 seller
 seller
 "player 1" "player 2" "player 3" "player 4"
@@ -2852,10 +2887,10 @@ feedconc_p4
 0
 
 BUTTON
-263
-414
-386
-447
+259
+473
+382
+506
 Apply biomass transfer
 biomfluxes biomass_sender biomass_receiver biomass_sent biomass_counterpart\nset biomass_sent_amount 0\nset biomass_in_amount 0
 NIL
@@ -2869,27 +2904,10 @@ NIL
 1
 
 BUTTON
-76
-12
-139
-45
-Sow
-sow
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-446
-486
-516
-519
+438
+545
+508
+578
 Market
 market-sell seller sell weight\nlivupdate seller\nmarket-buy buyer buy\nlivupdate buyer\nset buy_how_much 0\nset sell_how_much 0
 NIL
@@ -2987,18 +3005,18 @@ item 0 [food_unsecure] of farmers with [player = \"player 4\"]
 TEXTBOX
 1067
 501
-1164
-519
+1180
+520
 Food unsecure
 14
 0.0
 1
 
 CHOOSER
-342
-574
-434
-619
+334
+634
+426
+679
 weight
 weight
 "skinny" "medium" "fat" 0
@@ -3148,10 +3166,10 @@ count turtles with [farm = \"4\" and\nhunger > 0 and shape = \"wolf\" and \n[pco
 11
 
 BUTTON
-157
-75
-220
-108
+99
+44
+162
+77
 NIL
 go
 T
@@ -3164,22 +3182,196 @@ NIL
 NIL
 1
 
-BUTTON
-152
-109
-224
-142
-NIL
-startup
-NIL
+PLOT
+1486
+37
+1719
+210
+residue left on field
+ticks
+amount of residue
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "" "plot count turtles\nwith [farm = \"1\" and\n hidden? = false and shape = \"star\"]"
+"player 2" 1.0 0 -1184463 true "" "plot count turtles\nwith [farm = \"2\" and\n hidden? = false and shape = \"star\"]"
+"player 3" 1.0 0 -12087248 true "" "plot count turtles\nwith [farm = \"3\" and\n hidden? = false and shape = \"star\"]"
+"player 4" 1.0 0 -955883 true "" "plot count turtles\nwith [farm = \"4\" and\n hidden? = false and shape = \"star\"]"
+
+PLOT
+1719
+36
+1952
+211
+residue stocked
+ticks
+amount of residue
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "" "plot count turtles\nwith [farm = \"1\" and\n hidden? = true and shape = \"star\"]"
+"player 2" 1.0 0 -1184463 true "" "plot count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"]"
+"player 3" 1.0 0 -14439633 true "" "plot count turtles\nwith [farm = \"3\" and\n hidden? = true and shape = \"star\"]"
+"player 4" 1.0 0 -955883 true "" "plot count turtles\nwith [farm = \"4\" and\n hidden? = true and shape = \"star\"]"
+
+PLOT
+1487
+213
+1722
+390
+cattle
+ticks
+Number of animals
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "" "plot item 0 [ncow] of turtles\nwith [farm = \"1\" and shape = \"person farmer\"]"
+"player 2" 1.0 0 -1184463 true "" "plot item 0 [ncow] of turtles\nwith [farm = \"2\" and shape = \"person farmer\"]"
+"player 3" 1.0 0 -14439633 true "" "plot item 0 [ncow] of turtles\nwith [farm = \"3\" and shape = \"person farmer\"]"
+"player 4" 1.0 0 -955883 true "" "plot item 0 [ncow] of turtles\nwith [farm = \"4\" and shape = \"person farmer\"]"
+
+PLOT
+1724
+213
+1953
+389
+small ruminants
+ticks
+Number of animals
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "" "plot item 0 [nsrum] of turtles\nwith [farm = \"1\" and shape = \"person farmer\"]"
+"player 2" 1.0 0 -1184463 true "" "plot item 0 [nsrum] of turtles\nwith [farm = \"2\" and shape = \"person farmer\"]"
+"player 3" 1.0 0 -13840069 true "" "plot item 0 [nsrum] of turtles\nwith [farm = \"3\" and shape = \"person farmer\"]"
+"player 4" 1.0 0 -955883 true "" "plot item 0 [nsrum] of turtles\nwith [farm = \"4\" and shape = \"person farmer\"]"
+
+PLOT
+1486
+393
+1723
+543
+on-farm income
+ticks
+Income
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "" "plot item 0[onfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 1\"\n]"
+"player 2" 1.0 0 -1184463 true "" "plot item 0[onfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 2\"\n]"
+"player 3" 1.0 0 -13840069 true "" "plot item 0[onfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 3\"\n]"
+"player 4" 1.0 0 -955883 true "" "plot item 0[onfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 4\"\n]"
+
+PLOT
+1727
+392
+1954
+542
+off-farm income
+ticks
+Income
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 1\"\n]" "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 1\"\n]"
+"player 2" 1.0 0 -1184463 true "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 2\"\n]" "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 2\"\n]"
+"player 3" 1.0 0 -13840069 true "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 3\"\n]" "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 3\"\n]"
+"player 4" 1.0 0 -955883 true "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 4\"\n]" "plot item 0[offfarm_inc] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 4\"\n]"
+
+PLOT
+1623
+545
+1823
+695
+grain
+ticks
+amount of grain
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"player 1" 1.0 0 -13791810 true "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 1\"\n]" "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 1\"\n]"
+"player 2" 1.0 0 -1184463 true "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 2\"\n]" "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 2\"\n]"
+"player 3" 1.0 0 -13840069 true "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 3\"\n]" "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 3\"\n]"
+"player 4" 1.0 0 -955883 true "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 4\"\n]" "plot item 0[ngrain] of turtles with [\nshape = \"person farmer\" and\nplayer = \"player 4\"\n]"
+
+SWITCH
+205
+90
+322
+124
+open_field1?
+open_field1?
 1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
 1
+-1000
+
+SWITCH
+327
+90
+445
+124
+open_field2?
+open_field2?
+1
+1
+-1000
+
+SWITCH
+205
+200
+320
+234
+open_field3?
+open_field3?
+1
+1
+-1000
+
+SWITCH
+330
+202
+445
+236
+open_field4?
+open_field4?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -3345,7 +3537,7 @@ Polygon -16777216 false false 65 70 91 50 136 35 181 35 226 65 246 86 241 65 196
 Polygon -16777216 false false 90 135 60 135 60 180 90 180 90 135 120 135 120 180 150 180 150 135 180 135 180 180 210 180 210 135 240 135 240 180 210 180 210 135
 
 cow
-false
+true
 0
 Polygon -7500403 true true 200 193 197 249 179 249 177 196 166 187 140 189 93 191 78 179 72 211 49 209 48 181 37 149 25 120 25 89 45 72 103 84 179 75 198 76 252 64 272 81 293 103 285 121 255 121 242 118 224 167
 Polygon -7500403 true true 73 210 86 251 62 249 48 208
@@ -3362,7 +3554,7 @@ false
 Circle -7500403 true true 90 90 120
 
 drop
-false
+true
 0
 Circle -7500403 true true 73 133 152
 Polygon -7500403 true true 219 181 205 152 185 120 174 95 163 64 156 37 149 7 147 166
@@ -3505,7 +3697,7 @@ Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
 
 sheep
-false
+true
 15
 Circle -1 true true 203 65 88
 Circle -1 true true 70 65 162
@@ -3584,7 +3776,7 @@ Circle -7500403 true true 45 90 120
 Circle -7500403 true true 104 74 152
 
 triangle
-false
+true
 0
 Polygon -7500403 true true 150 30 15 255 285 255
 
@@ -3673,10 +3865,10 @@ VIEW
 0
 
 SLIDER
-69
-54
-241
-87
+97
+46
+269
+79
 residue_on_field
 residue_on_field
 0.0
@@ -3688,20 +3880,20 @@ NIL
 HORIZONTAL
 
 CHOOSER
-62
-133
-154
-178
+73
+192
+165
+237
 send_biomass
 send_biomass
 \"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"money\"
 0
 
 INPUTBOX
-60
-184
-157
-244
+71
+243
+168
+303
 send_how_much
 0.0
 1
@@ -3709,20 +3901,20 @@ send_how_much
 Number
 
 CHOOSER
-163
-134
-255
-179
+174
+193
+266
+238
 send_to
 send_to
 \"player 1\" \"player 2\" \"player 3\" \"player 4\"
 0
 
 BUTTON
-166
-195
-260
-228
+177
+254
+271
+287
 transfer_biomass
 NIL
 NIL
@@ -3733,50 +3925,50 @@ NIL
 NIL
 
 TEXTBOX
-64
-34
-240
-60
+92
+26
+268
+52
 Proportion of residue to be left on field
 10
 0.0
 1
 
 TEXTBOX
-120
-109
-270
-127
+131
+168
+281
+186
 Biomass transfer
 11
 0.0
 1
 
 CHOOSER
-13
-291
-105
-336
+43
+375
+135
+420
 buy_what
 buy_what
 \"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
 0
 
 CHOOSER
-107
-291
-199
-336
+137
+375
+229
+420
 who_buy
 who_buy
 \"player 1\" \"player 2\" \"player 3\" \"player 4\"
 0
 
 INPUTBOX
-205
-291
-279
-351
+235
+375
+309
+435
 amount_buy
 0.0
 1
@@ -3784,30 +3976,30 @@ amount_buy
 Number
 
 CHOOSER
-7
-360
-99
-405
+44
+445
+136
+490
 sell_what
 sell_what
 \"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
 0
 
 CHOOSER
-110
-360
-202
-405
+140
+444
+232
+489
 who_sell
 who_sell
 \"player 1\" \"player 2\" \"player 3\" \"player 4\"
 0
 
 INPUTBOX
-209
-360
-278
-420
+239
+444
+308
+504
 amount_sell
 0.0
 1
@@ -3815,10 +4007,10 @@ amount_sell
 Number
 
 BUTTON
-121
-456
-191
-489
+151
+540
+221
+573
 Market
 NIL
 NIL
@@ -3829,10 +4021,10 @@ NIL
 NIL
 
 TEXTBOX
-134
-273
-284
-291
+164
+357
+198
+375
 Market
 11
 0.0
@@ -4063,40 +4255,40 @@ Player stats
 1
 
 CHOOSER
-111
-408
-203
-453
+141
+492
+233
+537
 biom_weight
 biom_weight
 \"skinny\" \"medium\" \"fat\" 0
 0
 
 MONITOR
-5
-565
-396
-614
+397
+622
+788
+671
 warning
 NIL
 0
 1
 
 TEXTBOX
-602
-459
-671
-479
-Message
+501
+453
+612
+471
+Secret message
 16
 0.0
 1
 
 INPUTBOX
-477
-495
-701
-630
+452
+481
+676
+616
 message text
 NIL
 1
@@ -4104,10 +4296,10 @@ NIL
 String
 
 BUTTON
-707
-572
-793
-605
+682
+558
+768
+591
 send message
 NIL
 NIL
@@ -4118,73 +4310,324 @@ NIL
 NIL
 
 CHOOSER
-704
-500
-796
-545
+679
+486
+771
+531
 message who
 message who
 \"player 1\" \"player 2\" \"player 3\" \"player 4\"
 0
 
 MONITOR
-1041
-627
-1157
-676
+920
+565
+1036
+614
 pseudo_
 NIL
 0
 1
 
 MONITOR
-1177
-627
-1323
-676
+1056
+565
+1202
+614
 name
 NIL
 0
 1
 
 TEXTBOX
-1158
-599
-1173
-617
+1037
+544
+1052
+562
 ID
 11
 0.0
 1
 
 MONITOR
-1159
-512
-1242
-561
+1051
+481
+1134
+530
 month
 NIL
 0
 1
 
 MONITOR
-1075
-513
-1132
-562
+967
+482
+1024
+531
 year
 NIL
 0
 1
 
 TEXTBOX
-1138
-474
-1168
-492
+1024
+455
+1054
+473
 Time
 11
 0.0
+1
+
+SWITCH
+125
+94
+244
+127
+open_field?
+open_field?
+0
+1
+-1000
+
+TEXTBOX
+55
+17
+76
+129
++\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+54
+128
+311
+146
+*+++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+293
+17
+312
+157
++\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+56
+10
+307
+38
+*+++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+48
+161
+63
+315
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+48
+155
+305
+173
+*++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+49
+312
+303
+330
+*++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+294
+160
+309
+314
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n
+11
+25.0
+1
+
+TEXTBOX
+27
+354
+42
+578
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n
+11
+25.0
+1
+
+TEXTBOX
+28
+578
+339
+596
+*+++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+27
+343
+358
+361
+*+++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+329
+353
+344
+577
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+370
+452
+385
+676
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n
+11
+25.0
+1
+
+TEXTBOX
+372
+677
+856
+695
+*++++++++++++++++++++++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+372
+444
+850
+462
+*++++++++++++++++++++++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+824
+454
+839
+678
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n
+11
+25.0
+1
+
+TEXTBOX
+783
+58
+798
+394
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+783
+394
+1334
+422
+*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+782
+44
+1332
+62
+*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+1324
+54
+1339
+390
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+899
+456
+914
+624
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
+1
+
+TEXTBOX
+902
+626
+1231
+644
+*++++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+902
+444
+1225
+462
+*++++++++++++++++++++++++++++++++++++++*
+11
+25.0
+1
+
+TEXTBOX
+1211
+453
+1226
+621
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+11
+25.0
 1
 
 @#$#@#$#@
