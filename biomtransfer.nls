@@ -31,7 +31,7 @@ to biomtransfer
   liens "1" liens "2" liens "3" liens "4"
   livupdate idplays
   livupdate send_to
-  set flux (list flux idplay send_to send_biomasse send_how_much)
+    set flux (list flux idplays send_to send_biomasse send_how_much)
   hubnet-send pseudo "send_how_much" 0
   ]
 end
