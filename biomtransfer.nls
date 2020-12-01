@@ -80,6 +80,7 @@ to receive-message
   if hubnet-message-tag = "amount_buy" [set amount_buy hubnet-message]
   if hubnet-message-tag = "sell_what" [set sell_what hubnet-message]
   if hubnet-message-tag = "amount_sell" [set amount_sell hubnet-message]
+  if hubnet-message-tag = "biom_weight" [set biom_weight hubnet-message]
   if hubnet-message-tag = "message text" [set message_text hubnet-message]
   if hubnet-message-tag = "message who" [set message_who hubnet-message]
   if hubnet-message-tag = "open_field?" [set open_field? hubnet-message]
