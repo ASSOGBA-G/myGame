@@ -40,13 +40,14 @@ directed-link-breed [biom_owner a-biom_owner]
 directed-link-breed [biom_transfer a-biom_transfer]
 
 patches-own [
- residue;;crop residue
- grain;;grain produced on agricultural plots
- grass;; grass on bush plots only
- cultiv;; is the patch cultivated or not?y/n
- ferti;;fertilized plot?y/n
- manu;;manure applied to plot?y/n
- harvested;;is plot harvested? y/n
+  residue;;crop residue
+  grain;;grain produced on agricultural plots
+  grass;; grass on bush plots only
+  cultiv;; is the patch cultivated or not?y/n
+  ferti;;fertilized plot?y/n
+  manu;;manure applied to plot?y/n
+  harvested;;is plot harvested? y/n
+  mulch;;amount of residue on field when starting a new year
 ]
 
 joueurs-own [
@@ -104,6 +105,7 @@ turtles-own [
   feedfam
   hunger;increase if an animal did not eat in a step, see reproduce
   nf;see livupdate, for fertilizer
+  mulch?;;used to determined if a residue can be turned into mulch
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -248,6 +250,10 @@ end
 
 to nextmonth
   set warn 0
+  export
+  set flux []
+  set messages []
+  set buysell []
   tick
   set month item ticks mois
   let players1 (list "player 1" "player 2" "player 3" "player 4")
@@ -286,10 +292,6 @@ to nextmonth
     if season = 1 [set saison "Good :)"]
     if season = 2 [set saison "Very good :)"]
   ]
-  export
-  set flux []
-  set messages []
-  set buysell []
   set day day + 1
 end
 to environment
@@ -694,14 +696,19 @@ to resdistrib [typology ferme]
 end
 
 to sow
+  let fin ""
   ifelse month = "July" [
     ;set farmers turtles with [shape = "person farmer"]
+    ask patches with [pcolor = rgb 0 255 0 and cultiv = "yes"][
+      set mulch count turtles-here with [shape = "star" and hidden? = false and mulch? = true]
+    ]
+    ask turtles with [mulch? = true][set open "no" set hidden? true];;residue become mulch if not eaten for an entire season
     ask turtles with [typo = "fertilizer" and color = 96][die]
     ask turtles with [typo = "fertilizer" and color = 97][die]
     ask turtles with [typo = "manure" and color = 36][die]
 
     ask turtles-on patches with [pcolor = rgb 0 255 0][
-      if typo != "fertilizer" or typo !="manure" and hidden? = false[
+      if typo != "fertilizer" or typo !="manure" and hidden? = false [
         die]
     ]
     set farmi [farm] of farmers
@@ -716,7 +723,9 @@ to sow
         let nman nmanure
         let posi pos
         ask patches with [plabel = ""][set plabel "99"]
-        let fin patches with [(read-from-string plabel) = posi and pcolor != white]
+        ifelse year = 1 [
+          set fin patches with [(read-from-string plabel) = posi and pcolor != white]]
+        [set fin patches with [cultiv = "yes"]];;cultivate the same plot each year
         ask patch-here[
           ;;seed
           sprout nseed [
@@ -881,7 +890,28 @@ to produce
             set farm item n farmi
           ]
         ]
-       ;;normal production depending on season
+
+        ;;gain of residue due to mulch
+        ;;4units of mulch for one residue
+        let paille sum [mulch] of cultivplot
+        ask n-of (floor (paille / 4)) patches [
+          sprout 1 [
+            set typo "residue"
+            set shape "star"
+            set size .5
+            set color yellow
+            set farm item n farmi
+            move-to one-of cultivplot
+          ]
+        ]
+
+        ask n-of (4 * floor (paille / 4)) out-link-neighbors with [shape = "star" and mulch? = true][die]
+
+        ask cultivplot [
+          set mulch count turtles-here with [shape = "star" and open = "no" and mulch? = true]
+        ]
+
+        ;;normal production depending on season
       ask cultivplot [
 
           sprout ngseason [
@@ -938,11 +968,15 @@ to harvest [presid gamer]
       ]]
 
       liens farmii
-
+        ;;residue harvested and left on field
       let tresid count out-link-neighbors with [typo = "residue" and shape = "star"]
       set tresid ceiling (tresid * presid / 100)
         ask n-of tresid out-link-neighbors with [typo = "residue" and shape = "star"] [
           set hidden? true
+        ]
+
+        ask out-link-neighbors with [typo = "residue" and shape = "star" and hidden? = false] [
+          set mulch? true;;these residue can be turned into mulch if not grazed before new season
         ]
 
         ;;update grain and residue info in farms
@@ -1220,7 +1254,7 @@ to directfeed [gamer]
   let farmlab item 0 [farm] of farmers with [player = gamer]
   if (count turtles with [(shape = "cow" or shape = "sheep" or shape = "wolf") and hunger > 0 and grazed != "yes" and farm = farmlab] > 0) [
     ask farmers with [player = gamer][
-      set forage count out-link-neighbors with [shape = "star" and hidden? = true]
+      set forage count out-link-neighbors with [shape = "star" and hidden? = true and open = "yes"]
       let fourrage forage
 
       ;;case of animal with 0 energy, cow > wolf > srum
@@ -2167,7 +2201,7 @@ MONITOR
 1014
 129
 stock residue
-count turtles\nwith [farm = \"1\" and\n hidden? = true and shape = \"star\"]
+count turtles\nwith [farm = \"1\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]
 17
 1
 11
@@ -2287,7 +2321,7 @@ MONITOR
 1020
 246
 stock residue
-count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"]
+count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]
 17
 1
 11
@@ -2462,7 +2496,7 @@ MONITOR
 1017
 369
 stock residue
-count turtles\nwith [farm = \"3\" and\n hidden? = true and shape = \"star\"]
+count turtles\nwith [farm = \"3\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]
 17
 1
 11
@@ -2637,7 +2671,7 @@ MONITOR
 1020
 490
 stock residue
-count turtles\nwith [farm = \"4\" and\n hidden? = true and shape = \"star\"]
+count turtles\nwith [farm = \"4\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]
 17
 1
 11
@@ -3234,10 +3268,10 @@ true
 true
 "" ""
 PENS
-"player 1" 1.0 0 -13791810 true "" "plot count turtles\nwith [farm = \"1\" and\n hidden? = true and shape = \"star\"]"
-"player 2" 1.0 0 -1184463 true "" "plot count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"]"
-"player 3" 1.0 0 -14439633 true "" "plot count turtles\nwith [farm = \"3\" and\n hidden? = true and shape = \"star\"]"
-"player 4" 1.0 0 -955883 true "" "plot count turtles\nwith [farm = \"4\" and\n hidden? = true and shape = \"star\"]"
+"player 1" 1.0 0 -13791810 true "" "plot count turtles\nwith [farm = \"1\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]"
+"player 2" 1.0 0 -1184463 true "" "plot count turtles\nwith [farm = \"2\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]"
+"player 3" 1.0 0 -14439633 true "" "plot count turtles\nwith [farm = \"3\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]"
+"player 4" 1.0 0 -955883 true "" "plot count turtles\nwith [farm = \"4\" and\n hidden? = true and shape = \"star\"\n and open = \"yes\"\n ]"
 
 PLOT
 1487
