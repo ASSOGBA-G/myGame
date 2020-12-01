@@ -1,6 +1,7 @@
 ;;author: Gildas Assogba
-__includes ["biomtransfer.nls" "market.nls" "message.nls"]
+__includes ["biomtransfer.nls" "market.nls" "message.nls" "exportresults.nls"]
 
+extensions [csv]
 globals [
   season;;type of season: 0=bad, 1=good, 2=very good
   saison;; explanation of season, see set up
@@ -27,7 +28,11 @@ globals [
   day;used in reproduce and nextmonth
   idplayer; list of players
   nj; index for players list
+  headoutput;;head of data to be exported in separated file
   output;;data to be exported in separated file
+  flux;;fluxes between players
+  messages;;list of messages
+  buysell;;list of selling and buying
 ]
 
 breed [joueurs joueur]
@@ -131,10 +136,10 @@ end
 to create-new-player
   set idplayer (list "player 1" "player 2" "player 3" "player 4")
   ifelse nj < 4 [
-  create-joueurs 1 [
-    set pseudo hubnet-message-source
-    set idplay item nj idplayer
-    set hidden? true
+    create-joueurs 1 [
+      set pseudo hubnet-message-source
+      set idplay item nj idplayer
+      set hidden? true
       set residue_on_field 0
       set send_biomass "residue"
       set send_to "player 1"
@@ -144,7 +149,8 @@ to create-new-player
       set biom_weight "skinny"
       set open_field? true
       set message_who "player 1"
-  ]
+      move-to patch-at 0 0
+    ]
     set nj nj + 1]
   [user-message "Maximum number of player reached"]
 end
@@ -222,10 +228,10 @@ to set-up
   set farmers turtles with [shape = "person farmer"]
   set month item 0 mois
   set canharvest 0
-  set year 1
+  set year 1 set day 0
   reset-ticks
-  set output (word
-    (list "step" "year" "month" "p1type" "p2type" "p3type" "p4type" "p1cattle" "p2cattle" "p3cattle" "p4cattle"
+  set headoutput (word
+    (list "year" "month" "p1type" "p2type" "p3type" "p4type" "p1cattle" "p2cattle" "p3cattle" "p4cattle"
       "p1srum" "p2srum" "p3srum" "p4srum" "p1donkey" "p2donkey" "p3donkey" "p4donkey" "p1famsize" "p2famsize"
       "p3famsize" "p4famsize" "p1cart" "p2cart" "p3cart" "p4cart" "p1trcycl" "p2trcycl" "p3trcycl" "p4trcycl"
       "p1fert" "p2fert" "p3fert" "p4fert" "p1man" "p2man" "p3man" "p4man" "p1residstck" "p2residstck" "p3residstck" "p4residstck"
@@ -235,6 +241,9 @@ to set-up
       "p2biomsent" "p2biomsentamount" "p2biomsentto" "p3biomsent" "p3biomsentamount" "p3biomsentto"
       "p4biomsent" "p4biomsentamount" "p4biomsentto")
   )
+  set flux []
+  set messages []
+  set buysell []
 end
 
 to nextmonth
@@ -277,6 +286,10 @@ to nextmonth
     if season = 1 [set saison "Good :)"]
     if season = 2 [set saison "Very good :)"]
   ]
+  export
+  set flux []
+  set messages []
+  set buysell []
   set day day + 1
 end
 to environment
@@ -750,7 +763,7 @@ to sow
             move-to one-of fin with [count turtles-here >= 1]
             if count turtles-here with [typo = "fertilizer"] > 2 [
               if any? patches with [(read-from-string plabel) = posi and pcolor != white
-              and count turtles-here < 5 and count turtles-here with [typo = "seed2"] > 0][
+              and count turtles-here with [typo = "fertilizer"] < 2 and count turtles-here with [typo = "seed2"] > 0][
                 let destination patches with [(read-from-string plabel) = posi and pcolor != white
                 and count turtles-here with [typo = "fertilizer"] < 2 and count turtles-here with [typo = "seed2"] > 0]
                 move-to one-of destination;; try to put max of 2 fertilizer per plot as beyond yield do not increase
@@ -1135,14 +1148,16 @@ to grazeresidue [gamer animal]
   ]
 
 
- ; ask cow with [grazed != "yes"][
- ;   ifelse any? turtles-here with[shape = "star" and open = "yes" and farm = farmlab][][
- ;     if any? turtles with[shape = "star" and open = "yes" and farm = farmlab and hidden? = false] [
- ;       move-to one-of cultivplot with [count turtles-here with [shape = "star" and open ="yes" and farm = farmlab and hidden? = false] > 0]
- ;     ]
- ;   ]
+  ask cow with [grazed != "yes"][
+    ifelse any? turtles-here with[shape = "star" and open = "yes" and (farm = farmlab or foreignaccess = "yes")][][
+      if any? turtles with[shape = "star" and open = "yes" and (farm = farmlab or foreignaccess = "yes") and hidden? = false] [
+        move-to one-of cultivplot with [
+          count turtles-here with [shape = "star" and open ="yes" and
+            (farm = farmlab or foreignaccess = "yes") and hidden? = false] > 0]
+      ]
+    ]
 
- ; ]
+  ]
 
 
   ;;eating residue
@@ -2033,7 +2048,7 @@ SLIDER
 327
 54
 420
-88
+87
 presid2
 presid2
 0
@@ -2730,7 +2745,7 @@ CHOOSER
 biomass_receiver
 biomass_receiver
 "player 1" "player 2" "player 3" "player 4"
-3
+2
 
 CHOOSER
 220
@@ -3333,7 +3348,7 @@ SWITCH
 205
 90
 322
-124
+123
 open_field1?
 open_field1?
 1
@@ -3344,7 +3359,7 @@ SWITCH
 327
 90
 445
-124
+123
 open_field2?
 open_field2?
 1
@@ -3355,7 +3370,7 @@ SWITCH
 205
 200
 320
-234
+233
 open_field3?
 open_field3?
 1
@@ -3366,7 +3381,7 @@ SWITCH
 330
 202
 445
-236
+235
 open_field4?
 open_field4?
 1
@@ -3945,30 +3960,20 @@ Biomass transfer
 1
 
 CHOOSER
-43
-375
-135
-420
+56
+379
+148
+424
 buy_what
 buy_what
 \"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
 0
 
-CHOOSER
-137
-375
-229
-420
-who_buy
-who_buy
-\"player 1\" \"player 2\" \"player 3\" \"player 4\"
-0
-
 INPUTBOX
-235
-375
-309
-435
+182
+380
+256
+440
 amount_buy
 0.0
 1
@@ -3976,30 +3981,20 @@ amount_buy
 Number
 
 CHOOSER
-44
-445
-136
-490
+52
+439
+144
+484
 sell_what
 sell_what
 \"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
 0
 
-CHOOSER
-140
-444
-232
-489
-who_sell
-who_sell
-\"player 1\" \"player 2\" \"player 3\" \"player 4\"
-0
-
 INPUTBOX
-239
-444
-308
-504
+187
+455
+256
+515
 amount_sell
 0.0
 1
@@ -4255,10 +4250,10 @@ Player stats
 1
 
 CHOOSER
-141
-492
-233
-537
+53
+486
+145
+531
 biom_weight
 biom_weight
 \"skinny\" \"medium\" \"fat\" 0
@@ -4485,7 +4480,7 @@ TEXTBOX
 578
 339
 596
-*+++++++++++++++++++++++++++++++++++++*
+*+++++++++++++++++++++++++++++++++*
 11
 25.0
 1
@@ -4495,15 +4490,15 @@ TEXTBOX
 343
 358
 361
-*+++++++++++++++++++++++++++++++++++++*
+*+++++++++++++++++++++++++++++++++*
 11
 25.0
 1
 
 TEXTBOX
-329
+299
 353
-344
+314
 577
 +\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
 11
