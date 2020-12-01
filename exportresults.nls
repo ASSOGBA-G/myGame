@@ -1,15 +1,5 @@
 to export
     file-open (word "resstat.txt")
-  set headoutput (list "year" "month" "p1type" "p2type" "p3type" "p4type" "p1cattle" "p2cattle" "p3cattle" "p4cattle"
-    "p1srum" "p2srum" "p3srum" "p4srum" "p1donkey" "p2donkey" "p3donkey" "p4donkey" "p1famsize" "p2famsize"
-    "p3famsize" "p4famsize" "p1cart" "p2cart" "p3cart" "p4cart" "p1trcycl" "p2trcycl" "p3trcycl" "p4trcycl"
-    "p1fert" "p2fert" "p3fert" "p4fert" "p1man" "p2man" "p3man" "p4man" "p1residstck" "p2residstck" "p3residstck" "p4residstck"
-    "p1residsoil" "p2residsoil" "p3residsoil" "p4residsoil" "p1residsoilp" "p2residsoilp" "p3residsoilp" "p4residsoilp"
-    "open_field1" "open_field2" "open_field3" "open_field4"
-    "p1conc" "p2conc" "p3conc" "p4conc" "p1fdunsec" "p2fdunsec" "p3fdunsec" "p4fdunsec" "p1onfinc" "p2onfinc" "p3onfinc" "p4onfinc"
-    "p1offinc" "p2offinc" "p3offinc" "p4offinc")
-  
-  
   
   set output (list year month player1type player2type player3type player4type
     item 0[ncow] of farmers with [player = "player 1"] item 0[ncow] of farmers with [player = "player 2"]
