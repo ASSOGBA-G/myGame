@@ -1,0 +1,63 @@
+to export
+    file-open (word "resstat.txt")
+  
+  set output (list year month player1type player2type player3type player4type
+    item 0[ncow] of farmers with [player = "player 1"] item 0[ncow] of farmers with [player = "player 2"]
+    item 0[ncow] of farmers with [player = "player 3"] item 0[ncow] of farmers with [player = "player 4"]
+    item 0[nsrum] of farmers with [player = "player 1"] item 0[nsrum] of farmers with [player = "player 2"]
+    item 0[nsrum] of farmers with [player = "player 3"] item 0[nsrum] of farmers with [player = "player 4"]
+    item 0[ndonkey] of farmers with [player = "player 1"] item 0[ndonkey] of farmers with [player = "player 2"]
+    item 0[ndonkey] of farmers with [player = "player 3"] item 0[ndonkey] of farmers with [player = "player 4"]
+    item 0[family_size] of farmers with [player = "player 1"] item 0[family_size] of farmers with [player = "player 2"]
+    item 0[family_size] of farmers with [player = "player 3"] item 0[family_size] of farmers with [player = "player 4"]
+    item 0[ncart] of farmers with [player = "player 1"] item 0[ncart] of farmers with [player = "player 2"]
+    item 0[ncart] of farmers with [player = "player 3"] item 0[ncart] of farmers with [player = "player 4"]
+    item 0[ntricycle] of farmers with [player = "player 1"] item 0[ntricycle] of farmers with [player = "player 2"]
+    item 0[ntricycle] of farmers with [player = "player 3"] item 0[ntricycle] of farmers with [player = "player 4"]
+    item 0[nfertilizer] of farmers with [player = "player 1"] item 0[nfertilizer] of farmers with [player = "player 2"]
+    item 0[nfertilizer] of farmers with [player = "player 3"] item 0[nfertilizer] of farmers with [player = "player 4"]
+    item 0[nmanure] of farmers with [player = "player 1"] item 0[nmanure] of farmers with [player = "player 2"]
+    item 0[nmanure] of farmers with [player = "player 3"] item 0[nmanure] of farmers with [player = "player 4"]
+    count turtles with [farm = "1" and hidden? = true and shape = "star"] count turtles with [farm = "2" and hidden? = true and shape = "star"]
+    count turtles with [farm = "3" and hidden? = true and shape = "star"] count turtles with [farm = "4" and hidden? = true and shape = "star"]
+    count turtles with [farm = "1" and hidden? = false and shape = "star"] count turtles with [farm = "2" and hidden? = false and shape = "star"]
+    count turtles with [farm = "3" and hidden? = false and shape = "star"] count turtles with [farm = "4" and hidden? = false and shape = "star"]
+    presid1 presid2 presid3 presid4
+    item 0[open_field?] of joueurs with [idplay = "player 1"] item 0[open_field?] of joueurs with [idplay = "player 2"]
+    item 0[open_field?] of joueurs with [idplay = "player 3"] item 0[open_field?] of joueurs with [idplay = "player 4"]
+    item 0[nconc] of farmers with [player = "player 1"] item 0[nconc] of farmers with [player = "player 2"]
+    item 0[nconc] of farmers with [player = "player 3"] item 0[nconc] of farmers with [player = "player 4"]
+    item 0[food_unsecure] of farmers with [player = "player 1"] item 0[food_unsecure] of farmers with [player = "player 2"]
+    item 0[food_unsecure] of farmers with [player = "player 3"] item 0[food_unsecure] of farmers with [player = "player 4"]
+    item 0 [onfarm_inc] of turtles with [player = "player 1" and shape = "person farmer"] 
+    item 0 [onfarm_inc] of turtles with [player = "player 2" and shape = "person farmer"]
+    item 0 [onfarm_inc] of turtles with [player = "player 3" and shape = "person farmer"] 
+    item 0 [onfarm_inc] of turtles with [player = "player 4" and shape = "person farmer"]
+    item 0 [offfarm_inc] of turtles with [player = "player 1" and shape = "person farmer"] 
+    item 0 [offfarm_inc] of turtles with [player = "player 2" and shape = "person farmer"]
+    item 0 [offfarm_inc] of turtles with [player = "player 3" and shape = "person farmer"] 
+    item 0 [offfarm_inc] of turtles with [player = "player 4" and shape = "person farmer"] 
+  )
+  
+  ifelse year = 1 and month = "July"[
+    file-print headoutput
+    file-print output
+  ]
+  [file-print output]
+  file-close
+  
+  file-open (word "resflux.txt")
+  set flux fput month flux set flux fput year flux
+  file-print flux
+  file-close
+  
+  file-open (word "resmsg.txt")
+  set messages fput month messages set messages fput year messages
+  file-print messages
+  file-close
+  
+  file-open (word "resmarket.txt")
+  set buysell fput month buysell set buysell fput year buysell
+  file-print buysell
+  file-close
+end

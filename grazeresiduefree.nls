@@ -1,0 +1,59 @@
+to grazeresiduefree [gamer animal]
+  let farmlab item 0 [label] of farmers with [player =  gamer]
+  let farmpos item 0 [pos] of farmers with [player =  gamer]
+  let cow turtles with [shape = animal and canmove = "yes" and farm = farmlab]
+
+     ;;cows movements on agricultural plots
+  ask cow with [grazed != "yes"][if any? turtles with [shape = "star" and open = "yes" and farm = farmlab and hidden? = false][
+    move-to one-of turtles with [shape = "star" and open = "yes" and farm = farmlab and hidden? = false]
+    ]
+  ]
+
+
+  ask cow with [grazed != "yes"][
+    ifelse any? turtles-here with[shape = "star" and open = "yes" and farm = farmlab][][
+      if any? turtles with[shape = "star" and open = "yes" and farm = farmlab and hidden? = false] [
+        move-to one-of cultivplot with [count turtles-here with [shape = "star" and open ="yes" and farm = farmlab and hidden? = false] > 0]
+      ]
+    ]
+
+  ]
+
+
+  ;;eating residue
+  let kil 0
+  let kild 0
+  ask cow with [grazed != "yes"][
+    if any? turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [
+      ask turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [
+        ifelse (animal = "cow" or animal = "wolf") [
+          set kil count turtles-here with [(shape = "cow" or shape ="wolf") and farm = farmlab]
+          set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false]
+          if kil > kild [set kil kild]
+          ask n-of kil turtles-here with[shape = "star" and farm = farmlab and hidden? = false][die]
+        ]
+
+        [
+          if count turtles-here with [shape = "sheep" and farm = farmlab and hidden? = false] = 1 [
+            ifelse neat = 2 [
+              ask one-of turtles-here with[shape = "star" and farm = farmlab and hidden? = false and neat = 2][die]
+            ]
+
+            [ set neat neat + 1]
+          ]
+          if count turtles-here with [shape = "sheep" and farm = farmlab] >= 2 [
+            set kil count turtles-here with [shape = "sheep" and farm = farmlab]
+            set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false]
+            if (kil / 2) > kild [set kil kild]
+            ask n-of ceiling (kil / 2) turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [die]
+          ]
+        ]
+      ]
+      set energy energy + 1
+      set hunger 0
+      set grazed "yes"
+    ]
+  ]
+
+end
+
