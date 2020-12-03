@@ -239,9 +239,7 @@ to set-up
       "p1fert" "p2fert" "p3fert" "p4fert" "p1man" "p2man" "p3man" "p4man" "p1residstck" "p2residstck" "p3residstck" "p4residstck"
       "p1residsoil" "p2residsoil" "p3residsoil" "p4residsoil" "p1residsoilp" "p2residsoilp" "p3residsoilp" "p4residsoilp"
       "p1conc" "p2conc" "p3conc" "p4conc" "p1fdunsec" "p2fdunsec" "p3fdunsec" "p4fdunsec" "p1onfinc" "p2onfinc" "p3onfinc" "p4onfinc"
-      "p1offinc" "p2offinc" "p3offinc" "p4offinc" "p1biomsent" "p1biomsentamount" "p1biomsentto"
-      "p2biomsent" "p2biomsentamount" "p2biomsentto" "p3biomsent" "p3biomsentamount" "p3biomsentto"
-      "p4biomsent" "p4biomsentamount" "p4biomsentto")
+      "p1offinc" "p2offinc" "p3offinc" "p4offinc")
   )
   set flux []
   set messages []
