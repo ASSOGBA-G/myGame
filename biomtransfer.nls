@@ -29,10 +29,15 @@ to biomtransfer
 
   ask biom_owner [die]
   liens "1" liens "2" liens "3" liens "4"
-  livupdate idplays
-  livupdate send_to
+    livupdate idplays
+    livupdate send_to
     set flux (list flux idplays send_to send_biomasse send_how_much)
-  hubnet-send pseudo "send_how_much" 0
+    file-open (word "resflux.txt")
+    set flux fput month flux set flux fput year flux
+    file-print flux
+    file-close
+    set flux []
+    hubnet-send pseudo "send_how_much" 0
   ]
 end
 
