@@ -88,7 +88,11 @@ to marche-sell
           ]
           
       ]]
-      set buysell (list buysell "sell"sell_whats sell_how_muchs biom_weights);; used as output to track selling. see exportresults.nls
+      set buysell (list buysell "sell" idplays sell_whats sell_how_muchs biom_weights);; used as output to track selling. see exportresults.nls
+      file-open (word "resmarket.txt")
+      file-print buysell
+      file-close
+      set buysell []
     ]
   ]
 end
@@ -214,7 +218,11 @@ to marche-buy
             liens item 0 [farm] of farmers with [player = idplays]
           ]
         ]
-        set buysell (list buysell "buy" buy_whats buy_how_muchs) ;; used as output to track buying
+        set buysell (list buysell "buy" idplays buy_whats buy_how_muchs) ;; used as output to track buying
+        file-open (word "resmarket.txt")
+        file-print buysell
+        file-close
+        set buysell []
       ]
       
     ]
