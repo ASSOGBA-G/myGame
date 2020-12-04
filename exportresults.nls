@@ -46,18 +46,18 @@ to export
   [file-print output]
   file-close
   
-  file-open (word "resflux.txt")
-  set flux fput month flux set flux fput year flux
-  file-print flux
-  file-close
+  ;file-open (word "resflux.txt")
+  ;set flux fput month flux set flux fput year flux
+  ;file-print flux
+  ;file-close
   
-  file-open (word "resmsg.txt")
-  set messages fput month messages set messages fput year messages
-  file-print messages
-  file-close
+  ;file-open (word "resmsg.txt")
+  ;set messages fput month messages set messages fput year messages
+  ;file-print messages
+  ;file-close
   
-  file-open (word "resmarket.txt")
-  set buysell fput month buysell set buysell fput year buysell
-  file-print buysell
-  file-close
+  ;file-open (word "resmarket.txt")
+  ;set buysell fput month buysell set buysell fput year buysell
+  ;file-print buysell
+  ;file-close
 end
