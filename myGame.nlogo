@@ -48,6 +48,7 @@ patches-own [
   manu;;manure applied to plot?y/n
   harvested;;is plot harvested? y/n
   mulch;;amount of residue on field when starting a new year
+  animhere;;total of animal on a cultivated patch, used in getmanure and livsim
 ]
 
 joueurs-own [
@@ -200,6 +201,7 @@ to update
   hubnet-send pseudo "name" idplay
   hubnet-send pseudo "month" month
   hubnet-send pseudo "year" year
+  hubnet-send pseudo "season" season
 end
 
 to execute-command [command ]
@@ -1135,8 +1137,10 @@ to livsim [gamer animal]
     ]
   ]
 
+  foreignresidue gamer
   grazeresidue gamer animal
   directfeed gamer
+  concfeed gamer
 
   ;;manure left on 30% of bushplot. only happens after January
   ;if (month != "July" and month != "August" and month != "September" and month != "October" and
@@ -1162,6 +1166,8 @@ to livsim [gamer animal]
   ;]
 
   reproduce gamer animal
+  getmanure gamer
+  liens farmlab
 
   ask cow with [grazed = "yes"] [set grazed ""]
 end
@@ -1336,16 +1342,35 @@ end
 to concfeed [gamer]
   let app "no"; apply conc feed or not
 
-  if gamer = "yes_1" [set gamer "player 1" set app "yes"]
-  if gamer = "yes_2" [set gamer "player 2" set app "yes"]
-  if gamer = "yes_3" [set gamer "player 3" set app "yes"]
-  if gamer = "yes_4" [set gamer "player 4" set app "yes"]
+  if gamer = "player 1" [
+    ifelse feedconc_p1 = "yes_1"[
+      set app "yes"]
+    [set app "no"]
+  ]
+
+  if gamer = "player 2" [
+    ifelse feedconc_p2 = "yes_1"[
+      set app "yes"]
+    [set app "no"]
+  ]
+
+  if gamer = "player 3" [
+    ifelse feedconc_p3 = "yes_3"[
+      set app "yes"]
+    [set app "no"]
+  ]
+
+  if gamer = "player 4" [
+    ifelse feedconc_p3 = "yes_4"[
+      set app "yes"]
+    [set app "no"]
+  ]
 
   if app = "yes" [
 
     ask farmers with [player = gamer][
       let cow out-link-neighbors with [shape = "cow" and canmove = "yes"]
-      set forage nconc
+      set forage nconc * 2 ;;concentrate = double effect of residue
       let fourrage forage
       let rest 0
 
@@ -1381,7 +1406,42 @@ to concfeed [gamer]
   ]
 end
 
+to getmanure [gamer]
 
+  ask farmers with [player = gamer][
+    ask patches with [pcolor = rgb 0 255 0][
+      let animher count turtles-here with [shape = "cow" and canmove = "yes"]
+      set animhere fput animher animhere
+    ]
+  ]
+
+  if month = "June" [
+   ask patches with [pcolor = rgb 0 255 0][
+      let chargeanim sum animhere
+      let manuregain floor (chargeanim / 4)
+      sprout manuregain [
+        set typo "manure"
+        set shape "triangle"
+        set farm item 0 [farm] of farmers with [pos = read-from-string [plabel] of patch-here]
+        set color 35
+        set size .5
+      ]
+    ]
+  ]
+end
+
+to foreignresidue [gamer]
+  ;;other farms access residue left on field
+  if gamer = "player 1" [set accessresid open_field1?]
+  if gamer = "player 2" [set accessresid open_field2?]
+  if gamer = "player 3" [set accessresid open_field3?]
+  if gamer = "player 4" [set accessresid open_field4?]
+  if any? joueurs with [idplay = gamer][
+    set accessresid item 0 [open_field?] of joueurs with [idplay = gamer]];;player has priority on game master
+  ask out-link-neighbors with [typo = "residue" and shape = "star"][
+    if accessresid = true [set foreignaccess "no"]
+  ]
+end
 
 to liens [ferme]
    ask farmers with [farm = ferme] [
@@ -1538,7 +1598,7 @@ to market-sell [gamer biomass weigh]
     ]
   ][
     ask farmers with [player = gamer][
-      ifelse biomass = "cart" and biomass = "tricycle" [
+      ifelse biomass = "cart" or biomass = "tricycle" [
         set onfarm_inc onfarm_inc + (6 + bonus3) * sell_how_much]
       [if biomass = "poultry"[set onfarm_inc onfarm_inc + (1 + bonus) * (sell_how_much / 10)];1unit of money = 10 poultry
        if biomass = "fertilizer" [set onfarm_inc onfarm_inc + 1 * sell_how_much]
@@ -1566,7 +1626,7 @@ to market-buy [gamer biomass]
   if biomass = "concentrate" [set biomass "conc"]
   if biomass = "small ruminant" [set biomass "srum"]
 
-  ifelse (biomass != "cart" and biomass != "tricycle")[
+  ifelse (biomass != "cart" or biomass != "tricycle")[
     ask farmers with [player = gamer][
       let inc onfarm_inc + offfarm_inc
       if biomass = "cattle" [
@@ -4377,9 +4437,9 @@ ID
 1
 
 MONITOR
-1051
+1010
 481
-1134
+1093
 530
 month
 NIL
@@ -4387,9 +4447,9 @@ NIL
 1
 
 MONITOR
-967
+926
 482
-1024
+983
 531
 year
 NIL
@@ -4648,13 +4708,23 @@ TEXTBOX
 1
 
 TEXTBOX
-1211
+1212
 453
-1226
+1227
 621
 +\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
 11
 25.0
+1
+
+MONITOR
+1108
+481
+1207
+530
+season
+NIL
+0
 1
 
 @#$#@#$#@
