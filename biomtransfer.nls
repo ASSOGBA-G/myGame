@@ -31,7 +31,11 @@ to biomtransfer
   liens "1" liens "2" liens "3" liens "4"
     livupdate idplays
     livupdate send_to
-    set flux (list flux idplays send_to send_biomasse send_how_much)
+    set flux fput send_how_much flux
+    set flux fput send_biomasse flux
+    set flux fput send_to flux
+    set flux fput idplays flux
+    ;set flux (list flux idplays send_to send_biomasse send_how_much)
     file-open (word "resflux.txt")
     set flux fput month flux set flux fput year flux
     file-print flux
@@ -89,4 +93,10 @@ to receive-message
   if hubnet-message-tag = "message text" [set message_text hubnet-message]
   if hubnet-message-tag = "message who" [set message_who hubnet-message]
   if hubnet-message-tag = "open_field?" [set open_field? hubnet-message]
+  if hubnet-message-tag = "residue_on_field" [set residue_on_field hubnet-message
+    if pseudo = "player 1" [set presid1 100 - residue_on_field]
+    if pseudo = "player 2" [set presid2 100 - residue_on_field]
+    if pseudo = "player 3" [set presid3 100 - residue_on_field]
+    if pseudo = "player 4" [set presid4 100 - residue_on_field]
+  ]
 end
