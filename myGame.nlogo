@@ -246,6 +246,7 @@ to set-up
   set flux []
   set messages []
   set buysell []
+  ask patches [set animhere []]
 end
 
 to nextmonth
@@ -1438,8 +1439,10 @@ to foreignresidue [gamer]
   if gamer = "player 4" [set accessresid open_field4?]
   if any? joueurs with [idplay = gamer][
     set accessresid item 0 [open_field?] of joueurs with [idplay = gamer]];;player has priority on game master
-  ask out-link-neighbors with [typo = "residue" and shape = "star"][
-    if accessresid = true [set foreignaccess "no"]
+  ask farmers with [player = gamer][
+    ask out-link-neighbors with [typo = "residue" and shape = "star"][
+      if accessresid = true [set foreignaccess "no"]
+    ]
   ]
 end
 
