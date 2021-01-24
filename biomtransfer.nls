@@ -94,9 +94,14 @@ to receive-message
   if hubnet-message-tag = "message who" [set message_who hubnet-message]
   if hubnet-message-tag = "open_field?" [set open_field? hubnet-message]
   if hubnet-message-tag = "residue_on_field" [set residue_on_field hubnet-message
-    if pseudo = "player 1" [set presid1 100 - residue_on_field]
-    if pseudo = "player 2" [set presid2 100 - residue_on_field]
-    if pseudo = "player 3" [set presid3 100 - residue_on_field]
-    if pseudo = "player 4" [set presid4 100 - residue_on_field]
+    if pseudo = "Local 1" [set presid1 100 - residue_on_field]
+    if pseudo = "Local 2" [set presid2 100 - residue_on_field]
+    if pseudo = "Local 3" [set presid3 100 - residue_on_field]
+    if pseudo = "Local 4" [set presid4 100 - residue_on_field]
   ]
+end
+
+to tranhumance
+  
+  
 end
