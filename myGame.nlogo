@@ -27,6 +27,7 @@ globals [
   forage;livestock feeding by farmer
   day;used in reproduce and nextmonth
   idplayer; list of players
+  playerlist; association of pseudo and player
   nj; index for players list
   headoutput;;head of data to be exported in separated file
   output;;data to be exported in separated file
@@ -68,6 +69,7 @@ joueurs-own [
   message_text
   message_who
   open_field?
+  list_of_player
 ]
 
 turtles-own [
@@ -153,6 +155,8 @@ to create-new-player
       set open_field? true
       set message_who "player 1"
       move-to patch-at 0 0
+      set playerlist fput item nj idplayer playerlist
+      set playerlist fput pseudo playerlist
     ]
     set nj nj + 1]
   [user-message "Maximum number of player reached"]
@@ -201,7 +205,8 @@ to update
   hubnet-send pseudo "name" idplay
   hubnet-send pseudo "month" month
   hubnet-send pseudo "year" year
-  hubnet-send pseudo "season" season
+  hubnet-send pseudo "season" saison
+  hubnet-send pseudo "list_of_player" playerlist
 end
 
 to execute-command [command ]
@@ -246,6 +251,7 @@ to set-up
   set flux []
   set messages []
   set buysell []
+  set playerlist []
   ask patches [set animhere []]
 end
 
@@ -281,9 +287,21 @@ to nextmonth
     ask farmers with [nplot = 7][set offfarm_inc offfarm_inc + 50]
     ask farmers with [nplot != 7][set offfarm_inc offfarm_inc + 10]
     ask farmers [
+      let xy farm
       set nmanure count out-link-neighbors with [shape = "cow" and canmove = "yes"];1cow=1manure/year
+      ask patches with [plabel = ""][set plabel "99"]
+      hatch nmanure [
+        set shape "triangle"
+        set color 35
+        set typo "manure"
+        show xy
+        move-to one-of patches with [plabel = xy]
+        set heading random 361
+      ]
+      ask patches with [plabel = "99"][set plabel ""]
     ]
     ask turtles with [shape = "box"][die]
+    ask turtles with [shape = "cow" and canmove = "no"][set canmove "yes" set hidden? false];;back from transhumance
     ask turtles with [canmove = "yes"][move-to one-of patches with [pcolor = (rgb 0 100 0)]]
     ;ask turtles with [shape = "cow" or shape = "sheep" or shape = "wolf" and canmove = "yes"][set energy 4]
     initbush
@@ -292,6 +310,7 @@ to nextmonth
     if season = 0 [set saison "Bad :("]
     if season = 1 [set saison "Good :)"]
     if season = 2 [set saison "Very good :)"]
+    ask patches with [pcolor = rgb 0 255 0][set animhere []]
   ]
   set day day + 1
 end
@@ -480,8 +499,13 @@ to environment
       let nb nconc
       let nfert nfertilizer
       let nman nmanure
+      ;set uncultivated patches to yellow
+      let agri patches with [(read-from-string plabel) = poss and pcolor != white]
+      ask n-of nplot agri [set cultiv "yes"]
+      ask agri with [cultiv != "yes"][set pcolor yellow]
+
       ask out-link-neighbors with [shape = "lightning"] [
-       hatch nb
+        hatch nb
       ]
 
       ask out-link-neighbors with [shape = "drop"][
@@ -724,9 +748,7 @@ to sow
         let nman nmanure
         let posi pos
         ask patches with [plabel = ""][set plabel "99"]
-        ifelse year = 1 [
-          set fin patches with [(read-from-string plabel) = posi and pcolor != white]]
-        [set fin patches with [cultiv = "yes"]];;cultivate the same plot each year
+        set fin patches with [cultiv = "yes"];;cultivate the same plot each year
         ask patch-here[
           ;;seed
           sprout nseed [
@@ -1138,6 +1160,13 @@ to livsim [gamer animal]
     ]
   ]
 
+  ;;animal in transhumance are supposed to be fed correctly
+  ask farmers with [player = gamer][
+    ask out-link-neighbors with [shape = "cow" and canmove = "no"][
+     set grazed "yes"
+    ]
+  ]
+
   foreignresidue gamer
   grazeresidue gamer animal
   directfeed gamer
@@ -1239,7 +1268,7 @@ end
 to livupdate [gamer]
 
   ask farmers with [player = gamer][
-    set ncow count out-link-neighbors with[shape = "cow" and canmove = "yes" and [pcolor] of patch-here != white]
+    set ncow count out-link-neighbors with[shape = "cow"  and [pcolor] of patch-here != white]
     set nsrum count out-link-neighbors with[shape = "sheep" and canmove = "yes" and [pcolor] of patch-here != white]
     set ndonkey count out-link-neighbors with[shape = "wolf" and canmove = "yes" and [pcolor] of patch-here != white]
     set npoultry count out-link-neighbors with[shape = "bird"] - 1; remove the ficitve one
@@ -1371,7 +1400,8 @@ to concfeed [gamer]
 
     ask farmers with [player = gamer][
       let cow out-link-neighbors with [shape = "cow" and canmove = "yes"]
-      set forage nconc * 2 ;;concentrate = double effect of residue
+      set forage (count out-link-neighbors with [typo = "conc" and
+        [pcolor] of patch-here != white]) * 2 ;;concentrate = double effect of residue
       let fourrage forage
       let rest 0
 
@@ -1398,7 +1428,8 @@ to concfeed [gamer]
           set energy energy + 1
         ]
       ]
-      ask n-of (ceiling fourrage - forage) out-link-neighbors with [typo = "conc"][
+      ask n-of floor ((fourrage - forage) / 2) out-link-neighbors with [typo = "conc" and
+        [pcolor] of patch-here != white][
        die
       ]
      ; set nconc rest
@@ -1408,26 +1439,38 @@ to concfeed [gamer]
 end
 
 to getmanure [gamer]
-
+  let manuregain 0
   ask farmers with [player = gamer][
     ask patches with [pcolor = rgb 0 255 0][
       let animher count turtles-here with [shape = "cow" and canmove = "yes"]
       set animhere fput animher animhere
     ]
   ]
-
+  let pst item 0 [pos] of farmers with [player = gamer]
   if month = "June" [
-   ask patches with [pcolor = rgb 0 255 0][
-      let chargeanim sum animhere
-      let manuregain floor (chargeanim / 4)
+    ask patches with [plabel = ""][set plabel "99"]
+   ask patches with [pcolor = rgb 0 255 0 and read-from-string plabel = pst][
+      let chargeanim max animhere
+      set manuregain floor (chargeanim / 4)
       sprout manuregain [
         set typo "manure"
         set shape "triangle"
-        set farm item 0 [farm] of farmers with [pos = read-from-string [plabel] of patch-here]
+        let frm read-from-string item 0 [plabel] of patch-here
+        set farm item 0 [farm] of farmers with [pos = frm]
         set color 35
         set size .5
+        move-to one-of patches with [pcolor = rgb 0 255 0 and read-from-string plabel = pst]
       ]
     ]
+    liens item 0 [farm] of farmers with [player = gamer]
+    ask farmers with [player = gamer]
+    [set manuregain count out-link-neighbors with [typo = "manure" and [pcolor] of patch-here = rgb 0 255 0]
+    ]
+    ask joueurs with [idplay = gamer][
+      hubnet-send pseudo "warning" (word "You got " manuregain " manure from grazing")
+    ]
+    ask patches with [plabel = "99"][set plabel ""]
+    show (word gamer " You got " manuregain " manure from grazing")
   ]
 end
 
@@ -2163,7 +2206,7 @@ presid3
 presid3
 0
 100
-50.0
+28.0
 1
 1
 NIL
@@ -4061,7 +4104,7 @@ CHOOSER
 424
 buy_what
 buy_what
-\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
+\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\" \"transhumance\"
 0
 
 INPUTBOX
@@ -4684,18 +4727,18 @@ TEXTBOX
 899
 456
 914
-624
-+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+680
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
 11
 25.0
 1
 
 TEXTBOX
-902
-626
-1231
-644
-*++++++++++++++++++++++++++++++++++++++*
+905
+680
+1327
+698
+*++++++++++++++++++++++++++++++++++++++++++++++++++*
 11
 25.0
 1
@@ -4703,19 +4746,19 @@ TEXTBOX
 TEXTBOX
 902
 444
-1225
+1315
 462
-*++++++++++++++++++++++++++++++++++++++*
+*++++++++++++++++++++++++++++++++++++++++++++++++++*
 11
 25.0
 1
 
 TEXTBOX
-1212
-453
-1227
-621
-+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
+1308
+452
+1323
+676
++\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+
 11
 25.0
 1
@@ -4728,6 +4771,16 @@ MONITOR
 season
 NIL
 0
+1
+
+MONITOR
+914
+621
+1294
+670
+list_of_player
+NIL
+3
 1
 
 @#$#@#$#@
