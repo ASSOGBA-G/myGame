@@ -250,31 +250,56 @@ to marche-buy
         ]
       ]
       
+      if buy_whats = "transhumance" [
+        let nbov item 0 [ncow] of farmers with [player = idplays]
+        ifelse nbov > buy_how_muchs [set qbuy 50 * buy_how_muchs]
+        [set qbuy 50 * nbov];;player does not pay more by mistake
+        ifelse inc < qbuy [
+          hubnet-send psd "warning" "You do not have enough money. Please try again" 
+          set arret 1] [
+          ifelse qbuy > onfarm_inc[
+            set offfarm_inc inc - qbuy
+            set onfarm_inc 0
+          ][set onfarm_inc onfarm_inc - qbuy]
+        ]
+      ]
+      
+      
       if arret = 0 [
-        ask one-of turtles with [typo = buy_whats][
-          hatch buy_how_muchs[
-            if buy_whats = "cattle" or buy_whats = "srum" or buy_whats = "donkey"[set state "skinny"]
-            if buy_whats = "residue" [set shape "star" set hidden? true]
-            if buy_whats = "conc" [set shape "lightning"]
-            set farm item 0 [farm] of farmers with [player = idplays]
-            if buy_whats != "poultry" and buy_whats != "conc"[set canmove "yes"
-              move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays])]
-              if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
-                count turtles-here < 2]
-              [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
-                count turtles-here < 2]]
-              
-              if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
-                count turtles-here = 0]
-              [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
-                count turtles-here = 0]]
-            
+        ifelse buy_whats != "transhumance"[
+          ask one-of turtles with [typo = buy_whats][
+            hatch buy_how_muchs[
+              if buy_whats = "cattle" or buy_whats = "srum" or buy_whats = "donkey"[set state "skinny"]
+              if buy_whats = "residue" [set shape "star" set hidden? true]
+              if buy_whats = "conc" [set shape "lightning"]
+              set farm item 0 [farm] of farmers with [player = idplays]
+              if buy_whats != "poultry" and buy_whats != "conc"[set canmove "yes"
+                move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays])]
+                if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                  count turtles-here < 2]
+                [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                  count turtles-here < 2]]
+                
+                if any? patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                  count turtles-here = 0]
+                [move-to one-of patches with [(read-from-string plabel) = (item 0[pos] of farmers with [player = idplays]) and
+                  count turtles-here = 0]]
+                
+              ]
+              if buy_whats = "fertilizer" [set color 96 set size .75 set heading one-of (range 0 360 45)];;used in sow
+              if buy_whats = "manure" [set color 36 set size .75 set heading one-of (range 0 360 45)]
+              liens item 0 [farm] of farmers with [player = idplays]
             ]
-            if buy_whats = "fertilizer" [set color 96 set size .75 set heading one-of (range 0 360 45)];;used in sow
-            if buy_whats = "manure" [set color 36 set size .75 set heading one-of (range 0 360 45)]
-            liens item 0 [farm] of farmers with [player = idplays]
           ]
         ]
+        [
+          ask farmers with [player = idplays][
+            ask n-of buy_how_muchs out-link-neighbors with [shape = "cow" and canmove = "yes"] [
+            set hidden? true set canmove "no"
+            ]
+          ]
+        ]
+        
         set buysell fput "buy" buysell
         set buysell lput idplays buysell set buysell lput buy_whats buysell
         set buysell lput buy_how_muchs buysell
