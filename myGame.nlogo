@@ -70,6 +70,7 @@ joueurs-own [
   message_who
   open_field?
   list_of_player
+  household_members
 ]
 
 turtles-own [
@@ -184,6 +185,7 @@ to update
   hubnet-send pseudo "tricycle" item 0[ntricycle] of farmers with [player = idplays]
   hubnet-send pseudo "cart" item 0[ncart] of farmers with [player = idplays]
   hubnet-send pseudo "grain" item 0[ngrain] of farmers with [player = idplays]
+  hubnet-send pseudo "household_members" item 0[family_size] of farmers with [player = idplays]
   hubnet-send pseudo "residue harv" item 0[nresidue] of farmers with [player = idplays]
   ask farmers with [player = idplays][
     set stck count out-link-neighbors with [typo = "residue" and hidden? = true and shape = "star"]
@@ -229,9 +231,9 @@ to set-up
   set cc 0
   set idplayer (list "player 1" "player 2" "player 3" "player 4")
   set season one-of (range 0 3 1)
-  if season = 0 [set saison "Bad :("]
+  if season = 0 [set saison "Good :)"]
   if season = 1 [set saison "Good :)"]
-  if season = 2 [set saison "Very good :)"]
+  if season = 2 [set saison "Good :)"]
   set mois (list "July" "November" "December"
     "February" "April" "June")
   set farmers turtles with [shape = "person farmer"]
@@ -294,7 +296,6 @@ to nextmonth
         set shape "triangle"
         set color 35
         set typo "manure"
-        show xy
         move-to one-of patches with [plabel = xy]
         set heading random 361
       ]
@@ -307,9 +308,9 @@ to nextmonth
     initbush
     set canharvest 0 ask farmers [set feedfam 0]
     set season one-of (range 0 3 1)
-    if season = 0 [set saison "Bad :("]
+    if season = 0 [set saison "Good :)"]
     if season = 1 [set saison "Good :)"]
-    if season = 2 [set saison "Very good :)"]
+    if season = 2 [set saison "Good :)"]
     ask patches with [pcolor = rgb 0 255 0][set animhere []]
   ]
   set day day + 1
@@ -2191,7 +2192,7 @@ presid2
 presid2
 0
 100
-50.0
+83.0
 1
 1
 NIL
@@ -2206,7 +2207,7 @@ presid3
 presid3
 0
 100
-28.0
+80.0
 1
 1
 NIL
@@ -2221,7 +2222,7 @@ presid4
 presid4
 0
 100
-50.0
+80.0
 1
 1
 NIL
@@ -4354,10 +4355,10 @@ NIL
 1
 
 MONITOR
-1002
-296
-1079
-345
+1046
+300
+1123
+349
 food unsecure
 NIL
 3
@@ -4779,6 +4780,16 @@ MONITOR
 1294
 670
 list_of_player
+NIL
+3
+1
+
+MONITOR
+935
+300
+1043
+349
+household_members
 NIL
 3
 1
