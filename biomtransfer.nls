@@ -35,9 +35,12 @@ to biomtransfer
     set flux fput send_biomasse flux
     set flux fput send_to flux
     set flux fput idplays flux
+    set flux fput month flux
+    set flux fput year flux
+    set flux fput sim flux
     ;set flux (list flux idplays send_to send_biomasse send_how_much)
     file-open (word "resflux.txt")
-    set flux fput month flux set flux fput year flux
+    ;set flux fput month flux set flux fput year flux
     file-print flux
     file-close
     set flux []
@@ -79,6 +82,7 @@ to biomflow
 end
 
 to receive-message
+  let idplays idplay
   ;ask joueurs with [idplays = hubnet-message-source][]
   if hubnet-message-tag = "residue_on_field" [set residue_on_field hubnet-message]
   if hubnet-message-tag = "send_biomass" [set send_biomass hubnet-message]
@@ -94,7 +98,7 @@ to receive-message
   if hubnet-message-tag = "message who" [set message_who hubnet-message]
   if hubnet-message-tag = "open_field?" [
     set open_field? hubnet-message
-    ask farmers with [player = hubnet-message-source][
+    ask farmers with [player = idplays][
     set accessresid hubnet-message;;player has priority on game master
         ask out-link-neighbors with [typo = "residue" and shape = "star"][
           if accessresid = true [set foreignaccess "yes"]
@@ -102,10 +106,10 @@ to receive-message
     ]
   ]
   if hubnet-message-tag = "residue_on_field" [set residue_on_field hubnet-message
-    if pseudo = "Local 1" [set presid1 100 - residue_on_field]
-    if pseudo = "Local 2" [set presid2 100 - residue_on_field]
-    if pseudo = "Local 3" [set presid3 100 - residue_on_field]
-    if pseudo = "Local 4" [set presid4 100 - residue_on_field]
+    if idplay = "player 1" [set presid1 100 - residue_on_field]
+    if idplay = "player 2" [set presid2 100 - residue_on_field]
+    if idplay = "player 3" [set presid3 100 - residue_on_field]
+    if idplay = "player 4" [set presid4 100 - residue_on_field]
   ]
 end
 
