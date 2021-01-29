@@ -34,6 +34,8 @@ globals [
   flux;;fluxes between players
   messages;;list of messages
   buysell;;list of selling and buying
+  harvstop?;;to stop the game if prop of resid to be harvest aren't normal
+  sim;;simulation unique ID
 ]
 
 breed [joueurs joueur]
@@ -234,15 +236,16 @@ to set-up
   if season = 0 [set saison "Good :)"]
   if season = 1 [set saison "Good :)"]
   if season = 2 [set saison "Good :)"]
-  set mois (list "July" "November" "December"
+  set mois (list "July" "November"
     "February" "April" "June")
   set farmers turtles with [shape = "person farmer"]
+  set harvstop? false
   set month item 0 mois
   set canharvest 0
   set year 1 set day 0
   reset-ticks
   set headoutput (word
-    (list "year" "month" "p1type" "p2type" "p3type" "p4type" "p1cattle" "p2cattle" "p3cattle" "p4cattle"
+    (list "sim" "year" "month" "p1type" "p2type" "p3type" "p4type" "p1cattle" "p2cattle" "p3cattle" "p4cattle"
       "p1srum" "p2srum" "p3srum" "p4srum" "p1donkey" "p2donkey" "p3donkey" "p4donkey" "p1famsize" "p2famsize"
       "p3famsize" "p4famsize" "p1cart" "p2cart" "p3cart" "p4cart" "p1trcycl" "p2trcycl" "p3trcycl" "p4trcycl"
       "p1fert" "p2fert" "p3fert" "p4fert" "p1man" "p2man" "p3man" "p4man" "p1residstck" "p2residstck" "p3residstck" "p4residstck"
@@ -250,6 +253,7 @@ to set-up
       "p1conc" "p2conc" "p3conc" "p4conc" "p1fdunsec" "p2fdunsec" "p3fdunsec" "p4fdunsec" "p1onfinc" "p2onfinc" "p3onfinc" "p4onfinc"
       "p1offinc" "p2offinc" "p3offinc" "p4offinc")
   )
+  set sim random 1000
   set flux []
   set messages []
   set buysell []
@@ -284,7 +288,7 @@ to nextmonth
   foreach players1 [concfeed item kk players1 set kk kk + 1]
   ;if month = "November" [user-message "You can now harvest :)"]
 
-  if ticks = 5 [set year year + 1 set month item 0 mois reset-ticks
+  if ticks = 4 [set year year + 1 set month item 0 mois reset-ticks
   user-message "New season! Time to sow"
     ask farmers with [nplot = 7][set offfarm_inc offfarm_inc + 50]
     ask farmers with [nplot != 7][set offfarm_inc offfarm_inc + 10]
@@ -298,6 +302,7 @@ to nextmonth
         set typo "manure"
         move-to one-of patches with [plabel = xy]
         set heading random 361
+        set size .75
       ]
       ask patches with [plabel = "99"][set plabel ""]
     ]
@@ -733,7 +738,7 @@ to sow
     ask turtles with [typo = "fertilizer" and color = 97][die]
     ask turtles with [typo = "manure" and color = 36][die]
 
-    ask turtles-on patches with [pcolor = rgb 0 255 0][
+    ask turtles-on patches with [pcolor = rgb 0 255 0 or pcolor = yellow][
       if typo != "fertilizer" or typo !="manure" and hidden? = false [
         die]
     ]
@@ -828,7 +833,7 @@ to sow
     ask turtles with [typo = "manure" and [pcolor] of patch-here != white][
       if count turtles-here with [typo = "manure" and hidden? = false] > 2 [
        let rfert count turtles-here with [typo = "manure" and hidden? = false] - 2
-        show rfert
+        ;show rfert
         ask n-of rfert turtles-here with [typo = "manure" and hidden? = false][
          set color 35 set hidden? true set size .5
         ]
@@ -969,6 +974,9 @@ end
 
 to harvest [presid gamer]
   ;;presid is the proportion of residue harvested, see interface
+  ;if harvstop? = true[stop
+  ;  show (word "set harvstop? false" " to continue")
+  ;];;this means I need to set harvstop? false
   let farmii item 0 [farm] of farmers with [player = gamer]
   if month = "November" [
     ifelse canharvest < 4 [
@@ -980,21 +988,27 @@ to harvest [presid gamer]
       ask farmers with [player = gamer] [
         ;;check if farm have resource to harvest a certain prop of biom
         if (presid / 100) > 0.5 [if ncart = 0 [
-          user-message (word "You do not own a donkey cart or tricycle, you can harvest a maximum of 50% of your crop residue."
+          user-message (word player " You do not own a donkey cart or tricycle, you can harvest a maximum of 50% of your crop residue."
             " Update the proportion of residue to be harvested and try to harvest again.")
+          ask joueurs with [idplay = gamer][
+            hubnet-send pseudo "warning" " You can harvest a maximum of 50% of your crop residue."]
+          set harvstop? true
           stop
         ]]
 
         if (presid / 100) > 0.8 [ifelse ntricycle >= 1 [set presid presid][
-          user-message (word "You do not own a tricycle, you can harvest a maximum of 80% of your crop residue."
+          user-message (word player " You do not own a tricycle, you can harvest a maximum of 80% of your crop residue."
             " Update the proportion of residue to be harvested and try to harvest again.")
+          ask joueurs with [idplay = gamer][
+            hubnet-send pseudo "warning" " You can harvest a maximum of 50% of your crop residue."]
+          set harvstop? true
           stop
-      ]]
+        ]]
 
-      liens farmii
+        liens farmii
         ;;residue harvested and left on field
-      let tresid count out-link-neighbors with [typo = "residue" and shape = "star"]
-      set tresid ceiling (tresid * presid / 100)
+        let tresid count out-link-neighbors with [typo = "residue" and shape = "star"]
+        set tresid ceiling (tresid * presid / 100)
         ask n-of tresid out-link-neighbors with [typo = "residue" and shape = "star"] [
           set hidden? true
         ]
@@ -1459,7 +1473,7 @@ to getmanure [gamer]
         let frm read-from-string item 0 [plabel] of patch-here
         set farm item 0 [farm] of farmers with [pos = frm]
         set color 35
-        set size .5
+        set size .75
         move-to one-of patches with [pcolor = rgb 0 255 0 and read-from-string plabel = pst]
       ]
     ]
@@ -2157,7 +2171,7 @@ BUTTON
 812
 461
 Next step
-if ticks = 0 [plot-pen-down]\nif month = \"July\" [sow]\ngrow [0]\nharvest presid1 \"player 1\"\nharvest presid2 \"player 2\"\nharvest presid3 \"player 3\"\nharvest presid4 \"player 4\"\nfeedfamily \"player 1\"\nfeedfamily \"player 2\"\nfeedfamily \"player 3\"\nfeedfamily \"player 4\"\nset buy_how_much 0\nset sell_how_much 0\nset biomass_sent_amount 0\nset biomass_in_amount 0\nnextmonth
+if ticks = 0 [plot-pen-down]\nif month = \"July\" [sow]\ngrow [0]\nharvest presid1 \"player 1\"\nif harvstop? = true [stop]\nharvest presid2 \"player 2\"\nif harvstop? = true [stop]\nharvest presid3 \"player 3\"\nif harvstop? = true [stop]\nharvest presid4 \"player 4\"\nif harvstop? = true [stop]\nfeedfamily \"player 1\"\nfeedfamily \"player 2\"\nfeedfamily \"player 3\"\nfeedfamily \"player 4\"\nset buy_how_much 0\nset sell_how_much 0\nset biomass_sent_amount 0\nset biomass_in_amount 0\nnextmonth
 NIL
 1
 T
@@ -2177,7 +2191,7 @@ presid1
 presid1
 0
 100
-49.0
+48.0
 1
 1
 NIL
@@ -2192,7 +2206,7 @@ presid2
 presid2
 0
 100
-83.0
+47.0
 1
 1
 NIL
@@ -2207,7 +2221,7 @@ presid3
 presid3
 0
 100
-80.0
+42.0
 1
 1
 NIL
@@ -2222,7 +2236,7 @@ presid4
 presid4
 0
 100
-80.0
+37.0
 1
 1
 NIL
@@ -3878,7 +3892,7 @@ Rectangle -7500403 true true 30 30 270 270
 Rectangle -16777216 true false 60 60 240 240
 
 star
-false
+true
 0
 Polygon -7500403 true true 151 1 185 108 298 108 207 175 242 282 151 216 59 282 94 175 3 108 116 108
 
