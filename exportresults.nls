@@ -1,7 +1,7 @@
 to export
     file-open (word "resstat.txt")
   
-  set output (list year month player1type player2type player3type player4type
+  set output (list sim year month player1type player2type player3type player4type
     item 0[ncow] of farmers with [player = "player 1"] item 0[ncow] of farmers with [player = "player 2"]
     item 0[ncow] of farmers with [player = "player 3"] item 0[ncow] of farmers with [player = "player 4"]
     item 0[nsrum] of farmers with [player = "player 1"] item 0[nsrum] of farmers with [player = "player 2"]
