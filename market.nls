@@ -96,6 +96,9 @@ to marche-sell
           
       ]]
       set buysell fput "sell" buysell
+      set buysell fput month buysell
+      set buysell fput year buysell
+      set buysell fput sim buysell
       set buysell lput idplays buysell set buysell lput sell_whats buysell
       set buysell lput sell_how_muchs buysell
       ;set buysell (list buysell "sell" idplays sell_whats sell_how_muchs biom_weights);; used as output to track selling. see exportresults.nls
@@ -299,8 +302,10 @@ to marche-buy
             ]
           ]
         ]
-        
         set buysell fput "buy" buysell
+        set buysell fput month buysell
+        set buysell fput year buysell
+        set buysell fput sim buysell
         set buysell lput idplays buysell set buysell lput buy_whats buysell
         set buysell lput buy_how_muchs buysell
         ;set buysell (list buysell "buy" idplays buy_whats buy_how_muchs) ;; used as output to track buying
