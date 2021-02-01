@@ -25,11 +25,11 @@ to marche-sell
   ;;prices adjustments according to period of year
   ifelse sell_whats != "grain" or sell_whats != "residue" or sell_whats != "conc" [
     if month = "December" or month = "April" or month = "June" [
-      set bonus10 10 set bonus20 20 set bonus30 30 set bonus1 1]
+      set bonus10 25 set bonus20 75 set bonus30 100 set bonus1 1]
   ]
   [
     if month = "April" or month = "June" [
-      set bonus10gr 10 set bonus8c 8 set bonus10m 10]
+      set bonus10gr 20 set bonus8c 10 set bonus10m 5]
   ]
 
   let etat ""
@@ -68,15 +68,15 @@ to marche-sell
         die
       ]
       if sell_whats = "cattle" [
-        set onfarm_inc onfarm_inc + (120 + bonus30) * sell_how_muchs; * sell_how_much
+        set onfarm_inc onfarm_inc + (100 + bonus30) * sell_how_muchs; * sell_how_much
       ]
       if sell_whats = "srum" [
-        set onfarm_inc onfarm_inc + (40 + bonus10) * sell_how_muchs
+        set onfarm_inc onfarm_inc + (25 + bonus10) * sell_how_muchs
       ]
       if sell_whats = "donkey" [
-        set onfarm_inc onfarm_inc + (80 + bonus20) * sell_how_muchs
+        set onfarm_inc onfarm_inc + (75 + bonus20) * sell_how_muchs
       ]
-          if sell_whats = "residue" [set onfarm_inc onfarm_inc + (5 + bonus10gr) * sell_how_muchs]
+          if sell_whats = "residue" [set onfarm_inc onfarm_inc + (5 + bonus10m) * sell_how_muchs]
           if sell_whats = "grain" [set onfarm_inc onfarm_inc + (20 + bonus10gr) * sell_how_muchs]
         ]
       ][
@@ -86,8 +86,8 @@ to marche-sell
             if sell_whats = "tricycle" [set onfarm_inc onfarm_inc + 200 * sell_how_muchs]]
       [if sell_whats = "poultry"[set onfarm_inc onfarm_inc + (1 + bonus1) * (sell_how_muchs / 10)];1unit of money = 10 poultry
        if sell_whats = "fertilizer" [set onfarm_inc onfarm_inc + 20 * sell_how_muchs]
-        if sell_whats = "conc" [set onfarm_inc onfarm_inc + (12 + bonus8c) * sell_how_muchs]
-        if sell_whats = "manure" [set onfarm_inc onfarm_inc + (5 + bonus10m) * sell_how_muchs]
+        if sell_whats = "conc" [set onfarm_inc onfarm_inc + (10 + bonus8c) * sell_how_muchs]
+        if sell_whats = "manure" [set onfarm_inc onfarm_inc + (20 + bonus10gr) * sell_how_muchs]
       ]
 
       ask n-of sell_how_muchs out-link-neighbors with [typo = sell_whats][
@@ -117,7 +117,7 @@ to marche-buy
   let bonus1 0; poultry.bonus symbolize prices variations
   let bonus8c 0; concentrate
   let bonus10 0;for srum in dec, apr, june
-  let bonus10m 0; for manure in apr, june
+  let bonus10m 0; for residue in apr, june
   let bonus20 0;for donkey in dec, apr, june
   let bonus30 0; for cows in dec, apr, june
   let bonus10gr 0; grain only
@@ -126,11 +126,11 @@ to marche-buy
   ;;prices adjustments according to period of year
   ifelse buy_whats != "grain" or buy_whats != "residue" or buy_whats != "conc" [
     if month = "December" or month = "April" or month = "June" [
-      set bonus10 10 set bonus20 20 set bonus30 30 set bonus1 1]
+      set bonus10 25 set bonus20 75 set bonus30 100 set bonus1 1]
   ]
   [
     if month = "April" or month = "June" [
-      set bonus10gr 10 set bonus8c 8 set bonus10m 10]
+      set bonus10gr 20 set bonus8c 10 set bonus10m 5]
   ]
 
   let etat ""
@@ -143,7 +143,7 @@ to marche-buy
     ask farmers with [player = idplays][
       let inc onfarm_inc + offfarm_inc
       if buy_whats = "cattle" [
-        set qbuy (120 + bonus30) * buy_how_muchs
+        set qbuy (100 + bonus30) * buy_how_muchs
         ifelse inc < qbuy [
           hubnet-send psd "warning" "You do not have enough money. Please try again" 
           set arret 1] [
@@ -155,7 +155,7 @@ to marche-buy
       ]
 
         if buy_whats = "srum" [
-        set qbuy (40 + bonus10) * buy_how_muchs
+        set qbuy (25 + bonus10) * buy_how_muchs
         ifelse inc < qbuy [
           hubnet-send psd "warning" "You do not have enough money. Please try again" 
           set arret 1] [
@@ -167,7 +167,7 @@ to marche-buy
       ]
       
       if buy_whats = "donkey" [
-        set qbuy (80 + bonus20) * buy_how_muchs
+        set qbuy (75 + bonus20) * buy_how_muchs
         ifelse inc < qbuy [
           hubnet-send psd "warning" "You do not have enough money. Please try again" 
           set arret 1
@@ -180,7 +180,7 @@ to marche-buy
       ]
       
       if buy_whats = "residue"[
-        set qbuy (5 + bonus10gr) * buy_how_muchs
+        set qbuy (5 + bonus10m) * buy_how_muchs
         show inc show qbuy
         ifelse inc < qbuy [
           hubnet-send psd "warning" "You do not have enough money. Please try again" 
@@ -205,7 +205,7 @@ to marche-buy
       ]
       
       if buy_whats = "conc"[
-        set qbuy (12 + bonus8c) * buy_how_muchs
+        set qbuy (10 + bonus8c) * buy_how_muchs
         ifelse inc < qbuy [
           hubnet-send psd "warning" "You do not have enough money. Please try again" 
           set arret 1] [
@@ -255,8 +255,8 @@ to marche-buy
       
       if buy_whats = "transhumance" [
         let nbov item 0 [ncow] of farmers with [player = idplays]
-        ifelse nbov > buy_how_muchs [set qbuy 50 * buy_how_muchs]
-        [set qbuy 50 * nbov];;player does not pay more by mistake
+        ifelse nbov > buy_how_muchs [set qbuy 25 * buy_how_muchs]
+        [set qbuy 25 * nbov];;player does not pay more by mistake
         ifelse inc < qbuy [
           hubnet-send psd "warning" "You do not have enough money. Please try again" 
           set arret 1] [
