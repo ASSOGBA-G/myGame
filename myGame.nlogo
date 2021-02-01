@@ -658,7 +658,7 @@ to resdistrib [typology ferme]
   if typology = "SOL" [
 
     ask turtles with [shape = "person farmer" and farm = ferme][
-      set family_size 7
+      set family_size 8
       set nplot 4
       set ncow one-of (range 0 3 1)
       set nsrum one-of (range 4 13 1)
@@ -704,7 +704,7 @@ to resdistrib [typology ferme]
   if typology = "LCL" [
 
     ask turtles with [shape = "person farmer" and farm = ferme][
-      set family_size 15
+      set family_size 16
       set nplot 3
       set ncow one-of (range 2 7 1)
       set ndonkey one-of (range 0 3 1)
@@ -879,7 +879,7 @@ to produce
 
   ;;basic prod according ot season
   if season = 0 [set ngseason 1 set nrseason 10]
-  if season = 1 [set ngseason 2 set nrseason 11]
+  if season = 1 [set ngseason 2 set nrseason 10]
   if season = 2 [set ngseason 3 set nrseason 12]
   if month = "July" [
     ask patches with [plabel = ""][set plabel "99"]
