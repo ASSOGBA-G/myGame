@@ -236,8 +236,7 @@ to set-up
   if season = 0 [set saison "Good :)"]
   if season = 1 [set saison "Good :)"]
   if season = 2 [set saison "Good :)"]
-  set mois (list "July" "November"
-    "February" "April" "June")
+  set mois (list "July" "November" "April" "June")
   set farmers turtles with [shape = "person farmer"]
   set harvstop? false
   set month item 0 mois
@@ -505,6 +504,8 @@ to environment
       let nb nconc
       let nfert nfertilizer
       let nman nmanure
+      let nca ncart
+      let ntr ntricycle
       ;set uncultivated patches to yellow
       let agri patches with [(read-from-string plabel) = poss and pcolor != white]
       ask n-of nplot agri [set cultiv "yes"]
@@ -513,6 +514,13 @@ to environment
       ask out-link-neighbors with [shape = "lightning"] [
         hatch nb
       ]
+      ask out-link-neighbors with [shape = "car"] [
+        hatch nca
+      ]
+      ask out-link-neighbors with [shape = "truck"] [
+        hatch ntr
+      ]
+
 
       ask out-link-neighbors with [shape = "drop"][
         hatch nfert [
@@ -974,9 +982,9 @@ end
 
 to harvest [presid gamer]
   ;;presid is the proportion of residue harvested, see interface
-  ;if harvstop? = true[stop
-  ;  show (word "set harvstop? false" " to continue")
-  ;];;this means I need to set harvstop? false
+  if harvstop? = true[stop
+    show (word "set harvstop? false" " to continue")
+  ];;this means I need to set harvstop? false
   let farmii item 0 [farm] of farmers with [player = gamer]
   if month = "November" [
     ifelse canharvest < 4 [
@@ -1294,6 +1302,8 @@ to livupdate [gamer]
                                                               ;  [set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1]
                                                               ;]
     set nfertilizer count out-link-neighbors with[typo = "fertilizer"] - 1
+    set ncart count out-link-neighbors with[shape = "car"] - 1
+    set ntricycle count out-link-neighbors with[shape = "truck"] - 1
     if ticks > 0 [
       set nmanure count out-link-neighbors with[typo = "manure"] - 1]
   ]
@@ -1815,6 +1825,10 @@ to reproduce [gamer animal]
       set warn 1
         show (word gamer " you have a lost one or more "
           anima " in your herd!")
+        ask joueurs with [idplay = gamer][
+         hubnet-send pseudo "warning" (word gamer " you have a lost one or more "
+          anima " in your herd!")
+        ]
       die
 
     ]
@@ -1826,10 +1840,14 @@ to reproduce [gamer animal]
     if energy > 14 and repro != "yes"[
      if random 101 >= 80 [
        hatch 1
-        set repro "yes"
-        set warn warn + 1
-        show (word gamer " you have a "
-          anima " newborn " " in your herd!");;20% of chance to reproduce
+          set repro "yes"
+          set warn warn + 1
+          show (word gamer " you have a "
+            anima " newborn " " in your herd!");;20% of chance to reproduce
+          ask joueurs with [idplay = gamer][
+            hubnet-send pseudo "warning" (word gamer " you have "
+              anima " newborn(s) in your herd!")
+          ]
       ]
     ]
   ]
@@ -2191,7 +2209,7 @@ presid1
 presid1
 0
 100
-48.0
+45.0
 1
 1
 NIL
@@ -2949,8 +2967,8 @@ CHOOSER
 633
 buy
 buy
-"residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "fertilizer" "cart" "tricyle"
-8
+"residue" "manure" "grain" "concentrate" "cattle" "small ruminant" "donkey" "poultry" "fertilizer" "cart" "tricycle"
+2
 
 CHOOSER
 334
@@ -2959,7 +2977,7 @@ CHOOSER
 632
 sell
 sell
-"residue" "manure" "grain" "concentrate" "cattle" "srum" "donkey" "poultry" "fertilizer" "cart" "tricyle"
+"residue" "manure" "grain" "concentrate" "cattle" "srum" "donkey" "poultry" "fertilizer" "cart" "tricycle"
 1
 
 INPUTBOX
@@ -4119,7 +4137,7 @@ CHOOSER
 424
 buy_what
 buy_what
-\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\" \"transhumance\"
+\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricycle\" \"transhumance\"
 0
 
 INPUTBOX
@@ -4140,7 +4158,7 @@ CHOOSER
 484
 sell_what
 sell_what
-\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricyle\"
+\"residue\" \"manure\" \"grain\" \"concentrate\" \"cattle\" \"small ruminant\" \"donkey\" \"poultry\" \"fertilizer\" \"cart\" \"tricycle\"
 0
 
 INPUTBOX
