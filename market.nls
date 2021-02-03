@@ -330,7 +330,7 @@ to marche-buy
         ifelse qbuy > onfarm_inc[
           set offfarm_inc inc - qbuy
           set onfarm_inc 0
-        ][set onfarm_inc onfarm_inc - qbuy hubnet-send psd "warning" "Transaction done"]
+        ][set onfarm_inc onfarm_inc - qbuy]
       ]
       
       if arret = 0 [
