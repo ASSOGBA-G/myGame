@@ -3,6 +3,8 @@ to market
   marche-sell
   let idplays idplay
   livupdate idplays
+  ask joueurs with [idplay = idplays][set amount_buy 0]
+  ask joueurs with [idplay = idplays][set amount_sell 0]
   hubnet-send pseudo "amount_buy" 0
   hubnet-send pseudo "amount_sell" 0
 end
@@ -37,7 +39,7 @@ to marche-sell
   if sell_whats = "concentrate" [set sell_whats "conc"]
   if sell_whats = "small ruminant" [set sell_whats "srum"]
 
-  ifelse sell_whats != "cart" and sell_whats != "tricyle" and sell_whats != "poultry" [
+  ifelse sell_whats != "cart" and sell_whats != "tricycle" and sell_whats != "poultry" [
     ask farmers with [player = idplays][
       set qsell count out-link-neighbors with [typo = sell_whats and [pcolor] of patch-here != white]]
   ]
@@ -139,7 +141,7 @@ to marche-buy
   if buy_whats = "concentrate" [set buy_whats "conc"]
   if buy_whats = "small ruminant" [set buy_whats "srum"]
 
-  ifelse (buy_whats != "cart" or buy_whats != "tricycle")[
+  ifelse (buy_whats != "cart" and buy_whats != "tricycle")[
     ask farmers with [player = idplays][
       let inc onfarm_inc + offfarm_inc
       if buy_whats = "cattle" [
@@ -291,6 +293,7 @@ to marche-buy
               ]
               if buy_whats = "fertilizer" [set color 96 set size .75 set heading one-of (range 0 360 45)];;used in sow
               if buy_whats = "manure" [set color 36 set size .75 set heading one-of (range 0 360 45)]
+              if buy_whats = "grain" [set color red set size .75 set shape "cylinder" set hidden? true]
               liens item 0 [farm] of farmers with [player = idplays]
             ]
           ]
@@ -327,7 +330,7 @@ to marche-buy
         ifelse qbuy > onfarm_inc[
           set offfarm_inc inc - qbuy
           set onfarm_inc 0
-        ][set onfarm_inc onfarm_inc - qbuy]
+        ][set onfarm_inc onfarm_inc - qbuy hubnet-send psd "warning" "Transaction done"]
       ]
       
       if arret = 0 [
