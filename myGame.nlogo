@@ -52,6 +52,7 @@ patches-own [
   harvested;;is plot harvested? y/n
   mulch;;amount of residue on field when starting a new year
   animhere;;total of animal on a cultivated patch, used in getmanure and livsim
+  manuregain
 ]
 
 joueurs-own [
@@ -191,7 +192,7 @@ to update
   hubnet-send pseudo "residue harv" item 0[nresidue] of farmers with [player = idplays]
   ask farmers with [player = idplays][
     set stck count out-link-neighbors with [typo = "residue" and hidden? = true and shape = "star"]
-    set stck2 count out-link-neighbors with [typo = "residue" and hidden? = false and shape = "star"]
+    set stck2 count out-link-neighbors with [typo = "residue" and hidden? = false and shape = "star" and mulch? != true]
     set rskc count out-link-neighbors with [shape = "cow" and canmove = "yes" and hunger > 0]
     set rsks count out-link-neighbors with [shape = "sheep" and canmove = "yes" and hunger > 0]
     set rskd count out-link-neighbors with [shape = "wolf" and canmove = "yes" and hunger > 0]
@@ -211,6 +212,10 @@ to update
   hubnet-send pseudo "year" year
   hubnet-send pseudo "season" saison
   hubnet-send pseudo "list_of_player" playerlist
+  if idplay = "player 1" [set presid1 100 - residue_on_field]
+  if idplay = "player 2" [set presid2 100 - residue_on_field]
+  if idplay = "player 3" [set presid3 100 - residue_on_field]
+  if idplay = "player 4" [set presid4 100 - residue_on_field]
 end
 
 to execute-command [command ]
@@ -256,7 +261,7 @@ to set-up
   set flux []
   set messages []
   set buysell []
-  set playerlist []
+  if count joueurs = 0 [set playerlist []]
   ask patches [set animhere []]
 end
 
@@ -267,30 +272,14 @@ to nextmonth
   set messages []
   set buysell []
   tick
-  set month item ticks mois
-  let players1 (list "player 1" "player 2" "player 3" "player 4")
-  let animals (list "cow" "sheep" "wolf")
-  let gle (list "1" "2" "3" "4")
-  let kk 0
-  foreach players1 [
-    let jj 0
-   foreach animals[
-     livsim item kk players1 item jj animals
-      set jj jj + 1
-    ]
-    liens item kk gle
-    livupdate item kk players1
-    set kk kk + 1
-  ]
-  set kk 0
-  set players1 (list feedconc_p1 feedconc_p2 feedconc_p3 feedconc_p4)
-  foreach players1 [concfeed item kk players1 set kk kk + 1]
-  ;if month = "November" [user-message "You can now harvest :)"]
+  if ticks < 4 [set month item ticks mois]
 
-  if ticks = 4 [set year year + 1 set month item 0 mois reset-ticks
-  user-message "New season! Time to sow"
+  if ticks = 4 [
+    set year year + 1 set month item 0 mois reset-ticks
+    user-message "New season! Time to sow"
     ask farmers with [nplot = 7][set offfarm_inc offfarm_inc + 50]
     ask farmers with [nplot != 7][set offfarm_inc offfarm_inc + 10]
+    ask turtles with [shape = "star" and hidden? = false][set mulch? true]
     ask farmers [
       let xy farm
       set nmanure count out-link-neighbors with [shape = "cow" and canmove = "yes"];1cow=1manure/year
@@ -317,6 +306,24 @@ to nextmonth
     if season = 2 [set saison "Good :)"]
     ask patches with [pcolor = rgb 0 255 0][set animhere []]
   ]
+  let players1 (list "player 1" "player 2" "player 3" "player 4")
+  let animals (list "cow" "sheep" "wolf")
+  let gle (list "1" "2" "3" "4")
+  let kk 0
+  foreach players1 [
+    let jj 0
+   foreach animals[
+     livsim item kk players1 item jj animals
+      set jj jj + 1
+    ]
+    liens item kk gle
+    livupdate item kk players1
+    set kk kk + 1
+  ]
+  set kk 0
+  set players1 (list feedconc_p1 feedconc_p2 feedconc_p3 feedconc_p4)
+  foreach players1 [concfeed item kk players1 set kk kk + 1]
+  ;if month = "November" [user-message "You can now harvest :)"]
   set day day + 1
 end
 to environment
@@ -645,9 +652,9 @@ to resdistrib [typology ferme]
     ask turtles with [shape = "person farmer" and farm = ferme][
       set family_size 8
       set nplot 5
-      set ncow one-of (range 0 4 1)
+      set ncow one-of (range 0 2 1)
       set nsrum one-of (range 0 11 1)
-      set npoultry one-of (range 3 11 1)
+      set npoultry one-of (range 4 11 1)
       set nfertilizer one-of (range 0 4 1)
       set ncart one-of (range 0 2 1)
       ifelse ncart > 0 [set ndonkey one-of (range 1 3 1)][set ndonkey one-of (range 0 3 1)]
@@ -669,8 +676,8 @@ to resdistrib [typology ferme]
       set family_size 8
       set nplot 4
       set ncow one-of (range 0 3 1)
-      set nsrum one-of (range 4 13 1)
-      set npoultry one-of (range 2 16 1)
+      set nsrum one-of (range 5 16 1)
+      set npoultry one-of (range 4 11 1)
       set nfertilizer one-of (range 0 3 1)
       set ncart one-of (range 0 2 1)
       ifelse ncart > 0 [set ndonkey one-of (range 1 2 1)][set ndonkey one-of (range 0 2 1)]
@@ -691,10 +698,10 @@ to resdistrib [typology ferme]
     ask turtles with [shape = "person farmer" and farm = ferme][
       set family_size 12
       set nplot 7
-      set ncow one-of (range 0 4 1)
+      set ncow one-of (range 4 7 1)
       set ndonkey one-of (range 1 3 1)
-      set nsrum one-of (range 5 18 1)
-      set npoultry one-of (range 8 23 1)
+      set nsrum one-of (range 5 21 1)
+      set npoultry one-of (range 10 21 1)
       set nfertilizer one-of (range 0 4 1)
       set ncart 1
       set ntricycle one-of (range 0 2 1)
@@ -714,10 +721,10 @@ to resdistrib [typology ferme]
     ask turtles with [shape = "person farmer" and farm = ferme][
       set family_size 16
       set nplot 3
-      set ncow one-of (range 2 7 1)
+      set ncow one-of (range 5 11 1)
       set ndonkey one-of (range 0 3 1)
-      set nsrum one-of (range 9 52 1)
-      set npoultry one-of (range 0 28  1)
+      set nsrum one-of (range 10 51 1)
+      set npoultry one-of (range 0 31  1)
       set nfertilizer one-of (range 0 2 1)
       set ncart one-of (range 0 2 1)
       ifelse ncart > 0 [set ndonkey one-of (range 1 3 1)][set ndonkey one-of (range 0 3 1)]
@@ -887,7 +894,7 @@ to produce
 
   ;;basic prod according ot season
   if season = 0 [set ngseason 1 set nrseason 10]
-  if season = 1 [set ngseason 2 set nrseason 10]
+  if season = 1 [set ngseason 2 set nrseason 5]
   if season = 2 [set ngseason 3 set nrseason 12]
   if month = "July" [
     ask patches with [plabel = ""][set plabel "99"]
@@ -982,8 +989,9 @@ end
 
 to harvest [presid gamer]
   ;;presid is the proportion of residue harvested, see interface
-  if harvstop? = true[stop
+  if harvstop? = true[
     show (word "set harvstop? false" " to continue")
+    stop
   ];;this means I need to set harvstop? false
   let farmii item 0 [farm] of farmers with [player = gamer]
   if month = "November" [
@@ -1008,7 +1016,7 @@ to harvest [presid gamer]
           user-message (word player " You do not own a tricycle, you can harvest a maximum of 80% of your crop residue."
             " Update the proportion of residue to be harvested and try to harvest again.")
           ask joueurs with [idplay = gamer][
-            hubnet-send pseudo "warning" " You can harvest a maximum of 50% of your crop residue."]
+            hubnet-send pseudo "warning" " You can harvest a maximum of 80% of your crop residue."]
           set harvstop? true
           stop
         ]]
@@ -1022,7 +1030,7 @@ to harvest [presid gamer]
         ]
 
         ask out-link-neighbors with [typo = "residue" and shape = "star" and hidden? = false] [
-          set mulch? true;;these residue can be turned into mulch if not grazed before new season
+          set mulch? false;;these residue can be turned into mulch if not grazed before new season
         ]
 
         ;;update grain and residue info in farms
@@ -1045,8 +1053,8 @@ to harvest [presid gamer]
       ]
 
       ask turtles with [typo = "residue" and shape = "star"] [set open "yes"]
+      set canharvest canharvest + 1
     ][user-message "You already harvested"]
-    set canharvest canharvest + 1
   ]
   ;[user-message "You cannot harvest, it is only possible in November"]
   ;if month = "November" and canharvest <= 4 [user-message "Feed your family with the grain harvested before next step"]
@@ -1069,7 +1077,7 @@ end
 to bush
   ifelse (month = "August" or month = "September" or month = "October")[
     ask bushplot [
-      sprout 3 [
+      sprout 1 [
         set shape "box"
         set size .25
         set color 135
@@ -1077,14 +1085,7 @@ to bush
     ]
   ]
   [
-    ask bushplot with [count turtles-here with[shape = "box"] > 0][
-      if count turtles-here with[shape = "box"] = 1 [
-        ask one-of turtles-here with[shape = "box"][die]]
-      if count turtles-here with[shape = "box"] >= 2 [
-        ask n-of 2 turtles-here with[shape = "box"][die]]
-    ]
-
-
+      ask turtles with[shape = "box"][die]
   ]
 
 end
@@ -1232,19 +1233,19 @@ to grazeresidue [gamer animal]
 
      ;;animals movements on agricultural plots
   ask cow with [grazed != "yes"][if any? turtles with [(shape = "star" and open = "yes" and hidden? = false) and
-    (farm = farmlab or foreignaccess = "yes")][
+    (farm = farmlab or foreignaccess = "yes") and mulch? != true][
     move-to one-of turtles with [(shape = "star" and open = "yes" and hidden? = false) and
-    (farm = farmlab or foreignaccess = "yes")]
+    (farm = farmlab or foreignaccess = "yes") and mulch? != true]
     ]
   ]
 
 
   ask cow with [grazed != "yes"][
-    ifelse any? turtles-here with[shape = "star" and open = "yes" and (farm = farmlab or foreignaccess = "yes")][][
-      if any? turtles with[shape = "star" and open = "yes" and (farm = farmlab or foreignaccess = "yes") and hidden? = false] [
+    ifelse any? turtles-here with[shape = "star" and open = "yes" and (farm = farmlab or foreignaccess = "yes") and mulch? != true][][
+      if any? turtles with[shape = "star" and open = "yes" and (farm = farmlab or foreignaccess = "yes") and hidden? = false and mulch? != true] [
         move-to one-of cultivplot with [
           count turtles-here with [shape = "star" and open ="yes" and
-            (farm = farmlab or foreignaccess = "yes") and hidden? = false] > 0]
+            (farm = farmlab or foreignaccess = "yes") and hidden? = false and mulch? != true] > 0]
       ]
     ]
 
@@ -1255,28 +1256,28 @@ to grazeresidue [gamer animal]
   let kil 0
   let kild 0
   ask cow with [grazed != "yes"][
-    if any? turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [
-      ask turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [
+    if any? turtles-here with[shape = "star" and farm = farmlab and hidden? = false and mulch? != true] [
+      ask turtles-here with[shape = "star" and farm = farmlab and hidden? = false and mulch? != true] [
         ifelse (animal = "cow" or animal = "wolf") [
           set kil count turtles-here with [(shape = "cow" or shape ="wolf")]
-          set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false]
+          set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false and mulch? != true]
           if kil > kild [set kil kild]
-          ask n-of kil turtles-here with[shape = "star" and farm = farmlab and hidden? = false][die]
+          ask n-of kil turtles-here with[shape = "star" and farm = farmlab and hidden? = false and mulch? != true][die]
         ]
 
         [
           if count turtles-here with [shape = "sheep" and hidden? = false] = 1 [
             ifelse neat = 2 [
-              ask one-of turtles-here with[shape = "star" and farm = farmlab and hidden? = false and neat = 2][die]
+              ask one-of turtles-here with[shape = "star" and farm = farmlab and hidden? = false and neat = 2 and mulch? != true][die]
             ]
 
             [ set neat neat + 1]
           ]
           if count turtles-here with [shape = "sheep" ] >= 2 [
             set kil count turtles-here with [shape = "sheep" ]
-            set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false]
+            set kild count turtles-here with [shape = "star" and farm = farmlab and hidden? = false and mulch? != true]
             if (kil / 2) > kild [set kil kild]
-            ask n-of ceiling (kil / 2) turtles-here with[shape = "star" and farm = farmlab and hidden? = false] [die]
+            ask n-of ceiling (kil / 2) turtles-here with[shape = "star" and farm = farmlab and hidden? = false and mulch? != true] [die]
           ]
         ]
       ]
@@ -1464,7 +1465,7 @@ to concfeed [gamer]
 end
 
 to getmanure [gamer]
-  let manuregain 0
+  let manuregains 0
   ask farmers with [player = gamer][
     ask patches with [pcolor = rgb 0 255 0][
       let animher count turtles-here with [shape = "cow" and canmove = "yes"]
@@ -1489,13 +1490,13 @@ to getmanure [gamer]
     ]
     liens item 0 [farm] of farmers with [player = gamer]
     ask farmers with [player = gamer]
-    [set manuregain count out-link-neighbors with [typo = "manure" and [pcolor] of patch-here = rgb 0 255 0]
+    [set manuregains count out-link-neighbors with [typo = "manure" and [pcolor] of patch-here != white]
     ]
     ask joueurs with [idplay = gamer][
-      hubnet-send pseudo "warning" (word "You got " manuregain " manure from grazing")
+      hubnet-send pseudo "warning" (word "You got " manuregains " manure from grazing")
     ]
     ask patches with [plabel = "99"][set plabel ""]
-    show (word gamer " You got " manuregain " manure from grazing")
+    show (word gamer " You got " manuregains " manure from grazing")
   ]
 end
 
@@ -2189,7 +2190,7 @@ BUTTON
 812
 461
 Next step
-if ticks = 0 [plot-pen-down]\nif month = \"July\" [sow]\ngrow [0]\nharvest presid1 \"player 1\"\nif harvstop? = true [stop]\nharvest presid2 \"player 2\"\nif harvstop? = true [stop]\nharvest presid3 \"player 3\"\nif harvstop? = true [stop]\nharvest presid4 \"player 4\"\nif harvstop? = true [stop]\nfeedfamily \"player 1\"\nfeedfamily \"player 2\"\nfeedfamily \"player 3\"\nfeedfamily \"player 4\"\nset buy_how_much 0\nset sell_how_much 0\nset biomass_sent_amount 0\nset biomass_in_amount 0\nnextmonth
+if ticks = 0 [plot-pen-down]\nif month = \"July\" [sow]\ngrow [0]\nharvest presid1 \"player 1\"\nif harvstop? = true [\nset canharvest 0\nshow (word \"set harvstop? false\" \" to continue\")\nstop]\nharvest presid2 \"player 2\"\nif harvstop? = true [\nset canharvest 0\nshow (word \"set harvstop? false\" \" to continue\")\nstop]\nharvest presid3 \"player 3\"\nif harvstop? = true [\nset canharvest 0\nshow (word \"set harvstop? false\" \" to continue\")\nstop]\nharvest presid4 \"player 4\"\nif harvstop? = true [\nset canharvest 0\nshow (word \"set harvstop? false\" \" to continue\")\nstop]\nfeedfamily \"player 1\"\nfeedfamily \"player 2\"\nfeedfamily \"player 3\"\nfeedfamily \"player 4\"\nset buy_how_much 0\nset sell_how_much 0\nset biomass_sent_amount 0\nset biomass_in_amount 0\nnextmonth
 NIL
 1
 T
@@ -2209,7 +2210,7 @@ presid1
 presid1
 0
 100
-45.0
+36.0
 1
 1
 NIL
@@ -2224,7 +2225,7 @@ presid2
 presid2
 0
 100
-47.0
+58.0
 1
 1
 NIL
@@ -2239,7 +2240,7 @@ presid3
 presid3
 0
 100
-42.0
+39.0
 1
 1
 NIL
@@ -2254,7 +2255,7 @@ presid4
 presid4
 0
 100
-37.0
+41.0
 1
 1
 NIL
@@ -2316,7 +2317,7 @@ MONITOR
 1106
 130
 residue on field
-count turtles\nwith [farm = \"1\" and\n hidden? = false and shape = \"star\"]
+count turtles\nwith [farm = \"1\" and\n hidden? = false and shape = \"star\" and mulch? != true]
 17
 1
 11
@@ -2469,7 +2470,7 @@ MONITOR
 1108
 247
 residue on field
-count turtles\nwith [farm = \"2\" and\n hidden? = false and shape = \"star\"]
+count turtles\nwith [farm = \"2\" and\n hidden? = false and shape = \"star\" and mulch? != true]
 17
 1
 11
@@ -2644,7 +2645,7 @@ MONITOR
 1103
 369
 residue on field
-count turtles\nwith [farm = \"3\" and\n hidden? = false and shape = \"star\"]
+count turtles\nwith [farm = \"3\" and\n hidden? = false and shape = \"star\" and mulch? != true]
 17
 1
 11
@@ -2819,7 +2820,7 @@ MONITOR
 1109
 490
 residue on field
-count turtles\nwith [farm = \"4\" and\n hidden? = false and shape = \"star\"]
+count turtles\nwith [farm = \"4\" and\n hidden? = false and shape = \"star\" and mulch? != true]
 17
 1
 11
