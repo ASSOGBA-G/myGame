@@ -46,6 +46,7 @@ to biomtransfer
     set flux []
     hubnet-send pseudo "send_how_much" 0
   ]
+  ask joueurs with [idplay = idplays][set send_how_much 0]
 end
 
 
