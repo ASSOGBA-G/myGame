@@ -1,7 +1,7 @@
-En ces temps de pandémies, le travail de modélisation d'accompagnement nous oblige à explorer des voient qu'on avait remis à plus tard. Je veux parler de HubNet. 
+En ces temps de pandémies, le travail de modélisation d'accompagnement nous oblige à explorer des voient qu'on avait remis à plus tard. Je veux parler de HubNet.
 Si netlogo est capable de générer un serveur sur un réseau local, passer a un usage d'internet n'était que de l'admin réseau et de la plomberie. Et effectivement! Voilà une solution de bricolage.
 
-![](img/Capture d’écran de 2020-11-13 18-44-54.png)
+<img src="img/Capture d’écran de 2020-11-13 18-44-54.png"></img>
 
 ## No-ip
 
@@ -22,3 +22,5 @@ Une fois que vous avez rendu accessible votre machine depuis l’extérieur, il 
 Le modèle `bee smart` s’ouvre et lance une interface serveur. Une fois que c’est fait, vos complices aux 4 coins du monde peuvent de leur côté lancer l’exécutable HubnetClient . Celui-là demande de renseigner le nom du joueur (_user name_), et l’adresse du serveur. Si le nom du joueur est laissé à la discrétion de vos joueurs, l’adresse du serveur devra être le nom de domaine que no-ip vous a fourni.
 
 Si tout se passe bien vous devriez pouvoir organiser des simulations participatives !
+
+<img src="img/Capture d’écran de 2020-11-19 11-47-25.png"></img>
